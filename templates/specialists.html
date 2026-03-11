@@ -1,0 +1,379 @@
+{% extends "base.html" %}
+
+{% block title %}Mutaxassislar - ProTop{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* RESTORED STYLES FROM ORIGINAL DESIGN */
+    :root {
+        --gradient: linear-gradient(135deg, #5b6cff 0%, #4654e3 100%);
+        --gray: var(--border-light);
+        --card-bg: var(--bg-card);
+    }
+
+    .header-controls {
+        text-align: center;
+        margin-bottom: 3rem;
+    }
+
+    /* Back Button Style */
+    .btn-back-custom {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        background: var(--bg-card);
+        padding: 12px 30px;
+        border-radius: 50px;
+        text-decoration: none;
+        color: var(--primary);
+        font-weight: 700;
+        border: 2px solid var(--primary);
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-back-custom:hover {
+        background: var(--primary);
+        color: white;
+        transform: translateY(-5px);
+        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Specialist Card - Original Design */
+    .specialists-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        gap: 30px;
+        margin-bottom: 3rem;
+    }
+
+    .specialist-card {
+        background: var(--card-bg);
+        border-radius: 24px;
+        padding: 30px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+        transition: all 0.3s ease;
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        position: relative;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .specialist-card:hover {
+        transform: translateY(-10px) scale(1.02);
+        box-shadow: 0 30px 60px rgba(0, 0, 0, 0.15);
+        border-color: rgba(91, 108, 255, 0.3);
+    }
+
+    .specialist-header {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0;
+        margin-bottom: 20px;
+        padding-bottom: 0;
+        /* Remove border bottom as well if moved to card style */
+        border-bottom: none;
+    }
+
+    .specialist-avatar {
+        width: 100%;
+        height: 250px;
+        /* Fixed height for rectangular card look */
+        background: var(--gray);
+        border-radius: 12px;
+        overflow: hidden;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-secondary);
+        font-size: 3rem;
+        font-weight: 700;
+        border: none;
+        box-shadow: none;
+    }
+
+    .specialist-avatar img {
+        width: 100%;
+        height: 100%;
+        border-radius: 12px;
+        object-fit: cover;
+    }
+
+    /* Fallback for no-photo text avatar */
+    .specialist-avatar.text-avatar {
+        height: 100px;
+        width: 100px;
+        /* Keep it small if it's just a letter */
+        margin: 0 auto 15px auto;
+        border-radius: 50%;
+        background: var(--surface);
+    }
+
+    .specialist-info h3 {
+        font-size: 1.4rem;
+        margin-bottom: 5px;
+        color: var(--text-main);
+        font-weight: 800;
+        line-height: 1.2;
+        overflow-wrap: break-word;
+        word-wrap: break-word;
+    }
+
+    .specialist-profession {
+        color: var(--primary);
+        font-weight: 700;
+        font-size: 1rem;
+    }
+
+    .specialist-details {
+        margin-bottom: 20px;
+        font-size: 0.95rem;
+    }
+
+    .detail-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+        color: var(--text-secondary);
+        padding: 10px 15px;
+        border-radius: 12px;
+        background: rgba(91, 108, 255, 0.05);
+        transition: all 0.3s ease;
+    }
+
+    .detail-item:hover {
+        background: rgba(91, 108, 255, 0.1);
+        transform: translateX(5px);
+    }
+
+    .detail-item i {
+        color: var(--primary);
+    }
+
+    .specialist-description {
+        color: var(--text-secondary);
+        line-height: 1.6;
+        margin-bottom: 20px;
+        padding: 15px;
+        background: rgba(91, 108, 255, 0.05);
+        border-radius: 12px;
+        font-size: 0.9rem;
+    }
+
+    /* Buttons */
+    .btn-action {
+        width: 100%;
+        padding: 16px;
+        border-radius: 18px;
+        border: none;
+        font-weight: 700;
+        font-size: 1.1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        background: var(--gradient);
+        color: white;
+        box-shadow: 0 12px 30px rgba(91, 108, 255, 0.3);
+        margin-top: auto;
+    }
+
+    .btn-action:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 18px 40px rgba(91, 108, 255, 0.4);
+    }
+
+    @media (max-width: 768px) {
+        .specialists-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .specialist-card {
+            margin-bottom: 10px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container animate-fade-in" style="padding-top: 6rem; padding-bottom: 4rem;">
+    <!-- Header Controls -->
+    <div class="header-controls">
+        <h1 style="margin-bottom: 0.5rem;">Mutaxassislar</h1>
+        <p class="text-muted" id="professionTitle" style="margin-bottom: 2rem;">Barcha mutaxassislar</p>
+
+        <div class="flex gap-4 flex-wrap justify-center">
+            <button class="btn-back-custom" onclick="history.back()">
+                <span class="material-icons notranslate" translate="no">arrow_back</span> Orqaga
+            </button>
+            <button class="btn-back-custom" id="addSpecialistBtn"
+                style="display: none; border-color: var(--accent); color: var(--accent);" onclick="openAddModal()">
+                <span class="material-icons notranslate" translate="no">add</span> Ariza yuborish
+            </button>
+        </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loadingState" class="text-center py-5">
+        <span class="material-icons notranslate" translate="no"
+            style="font-size: 3rem; color: var(--primary); animation: spin 1s infinite linear;">refresh</span>
+        <p class="mt-2 text-muted">Yuklanmoqda...</p>
+    </div>
+
+    <!-- Grid -->
+    <div id="specialistsGrid" class="specialists-grid" style="display: none;"></div>
+
+    <!-- Empty State -->
+    <div id="emptyState" class="text-center py-5" style="display: none;">
+        <span class="material-icons notranslate" translate="no" style="font-size: 4rem; color: var(--text-muted);">person_off</span>
+        <h3 class="mt-4">Mutaxassislar topilmadi</h3>
+        <p>Ushbu kasbda hozircha mutaxassislar yo'q.</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const API_URL = window.location.origin + "/api";
+    let currentProfession = '';
+    let isWorkerMode = false;
+
+    // Params
+    const params = new URLSearchParams(window.location.search);
+    currentProfession = params.get('profession') || '';
+    isWorkerMode = params.get('mode') === 'worker';
+
+    if (currentProfession) {
+        document.getElementById('professionTitle').textContent = currentProfession;
+
+        // Update document title
+        document.title = `${currentProfession} - ProTop`;
+    }
+
+    if (isWorkerMode && currentProfession) {
+        const btn = document.getElementById('addSpecialistBtn');
+        btn.style.display = 'inline-flex';
+
+        // Deep link to Telegram Bot
+        // IMPORTANT: Replace 'Java2112' with your actual Bot Username (without @)
+        // Example: const BOT_USERNAME = 'ProTop_Uz_Bot';
+        const BOT_USERNAME = 'ProfiniTop_bot';
+
+        btn.onclick = function () {
+            // Format: https://t.me/BOT_NAME?start=pro_Profession_Name
+            // Spaces are replaced with underscores for cleaner URLs, handled by bot
+            const deepLinkParam = 'pro_' + encodeURIComponent(currentProfession).replace(/%20/g, '_').replace(/ /g, '_');
+            window.open(`https://t.me/${BOT_USERNAME}?start=${deepLinkParam}`, '_blank');
+        };
+    }
+
+    // Load Specialists
+    async function loadSpecialists() {
+        try {
+            const url = currentProfession
+                ? `${API_URL}/specialists?profession=${encodeURIComponent(currentProfession)}`
+                : `${API_URL}/specialists`;
+
+            const res = await fetch(url);
+            const data = await res.json();
+
+            document.getElementById('loadingState').style.display = 'none';
+
+            if (data.specialists && data.specialists.length > 0) {
+                renderSpecialists(data.specialists);
+            } else {
+                document.getElementById('emptyState').style.display = 'block';
+            }
+        } catch (e) {
+            console.error(e);
+            document.getElementById('loadingState').innerHTML = '<p class="text-danger">Xatolik yuz berdi</p>';
+        }
+    }
+
+    function renderSpecialists(list) {
+        const grid = document.getElementById('specialistsGrid');
+        grid.style.display = 'grid';
+
+        // Custom sort
+        list.sort((a, b) => (b.top_order || 0) - (a.top_order || 0));
+
+        grid.innerHTML = list.map(s => {
+            const initial = s.full_name.charAt(0).toUpperCase();
+
+            // Ensure correct image path (use relative path if not absolute)
+            let imgSrc = s.photo_url;
+
+            // Fix: If DB has absolute localhost URL, convert to relative
+            if (imgSrc && imgSrc.includes('localhost')) {
+                try {
+                    const urlObj = new URL(imgSrc);
+                    imgSrc = urlObj.pathname; // e.g. /uploads/image.jpg
+                } catch (e) {
+                    imgSrc = imgSrc.replace(/http:\/\/localhost:\d+/, '');
+                }
+            }
+
+            if (imgSrc && !imgSrc.startsWith('http') && !imgSrc.startsWith('/')) {
+                imgSrc = '/' + imgSrc;
+            }
+
+            // Photo or Avatar
+            const photoEl = imgSrc
+                ? `<div class="specialist-avatar">
+                     <img src="${imgSrc}" alt="${s.full_name}">
+                   </div>`
+                : `<div class="specialist-avatar text-avatar">${initial}</div>`;
+
+            return `
+                <div class="specialist-card">
+                    <div class="specialist-header">
+                        ${photoEl}
+                        <div class="specialist-info">
+                            <h3>${s.full_name}</h3>
+                            <div class="specialist-profession">${s.profession}</div>
+                        </div>
+                    </div>
+
+                    <div class="specialist-details">
+                        <div class="detail-item">
+                            <span class="material-icons notranslate" translate="no">payments</span>
+                            <span>Narxi: ${s.price || "Kelishiladi"}</span>
+                        </div>
+                        
+                        <div class="detail-item">
+                            <span class="material-icons notranslate" translate="no">location_on</span>
+                            <span>Manzil: ${s.city || "O'zbekiston"}</span>
+                        </div>
+
+                        <div class="detail-item">
+                            <span class="material-icons notranslate" translate="no">work</span>
+                            <span>Tajriba: ${s.experience || 0} yil</span>
+                        </div>
+
+                        ${s.free_time ? `
+                            <div class="detail-item">
+                                <span class="material-icons notranslate" translate="no">schedule</span>
+                                <span>${s.free_time}</span>
+                            </div>
+                        ` : ''}
+                    </div>
+
+                    ${s.description ? `<div class="specialist-description line-clamp-3">${s.description}</div>` : ''}
+
+                    <button class="btn-action" onclick="window.open('tel:${s.phone}')">
+                         <span class="material-icons notranslate" translate="no">call</span> Bog'lanish
+                    </button>
+                </div>
+            `;
+        }).join('');
+    }
+
+    loadSpecialists();
+</script>
+{% endblock %}

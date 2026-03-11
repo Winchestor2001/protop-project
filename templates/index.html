@@ -1,0 +1,422 @@
+{% extends "base.html" %}
+
+{% block title %}Premium Professionals Uzbekistan | Mutaxassislar va Mijozlar Platformasi{% endblock %}
+
+{% block head %}
+<!-- SEO asosiy teglar -->
+<meta name="description"
+  content="O'zbekistonda 100+ kasb bo'yicha tekshirilgan mutaxassislar: ta'mirchi, usta, o'qituvchi va boshqalar. Tez toping, bevosita bog'laning. Mijozlar uchun bepul!">
+<meta name="keywords"
+  content="protop, mutaxassis topish, usta izlash, ta'mirchi Toshkent, o'qituvchi, freelancer O'zbekiston, premium professionals">
+<meta name="robots" content="index, follow">
+<meta name="author" content="Premium Professionals">
+<meta name="language" content="uz">
+<meta name="google-site-verification" content="A0YS9GakUs9J8AU5jwBvJ9lTnx5-eFfL0C1R9wLeMvE" />
+
+<!-- Open Graph (Facebook, Telegram va boshqalar uchun) -->
+<meta property="og:title" content="Premium Professionals — Mutaxassislar Platformasi">
+<meta property="og:description"
+  content="100+ kasb bo'yicha tekshirilgan mutaxassislar. Tez qidiruv, to'liq profil, bevosita bog'lanish.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://www.premium-pro.uz/">
+<meta property="og:image" content="https://www.premium-pro.uz/static/images/og-image.jpg">
+
+<!-- Twitter Cards -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Premium Professionals Uzbekistan">
+<meta name="twitter:description" content="Tekshirilgan mutaxassislar platformasi — mijozlar uchun bepul!">
+
+<!-- JSON-LD Structured Data (Google yoqtiradi) -->
+<script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "Premium Professionals",
+    "url": "https://www.premium-pro.uz/",
+    "description": "O'zbekistonda mutaxassislar va mijozlar uchun premium platforma",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": "https://www.premium-pro.uz/search?q={search_term_string}",
+      "query-input": "required name=search_term_string"
+    }
+  }
+  </script>
+{% endblock %}
+
+{% block content %}
+<main>
+  <!-- ===== HERO SECTION ===== -->
+  <section class="hero-section-new">
+    <div class="container animate-fade-in">
+      <div class="hero-content">
+        <h1 class="hero-title">Premium Professionals</h1>
+        <p class="hero-subtitle">
+          100+ kasb bo'yicha tekshirilgan mutaxassislar platformasi<br>
+          Mijozlar uchun mutlaqo bepul — oson qidiruv, to'liq profil, bevosita bog'lanish
+        </p>
+
+        <div class="hero-buttons">
+          <a href="/kliyent.html" class="hero-btn hero-btn-primary" aria-label="Mutaxassis izlash">
+            <span class="material-icons notranslate" translate="no">person_search</span>
+            MUTAXASSIS IZLASH
+          </a>
+          <a href="/ischilar.html" class="hero-btn hero-btn-glass" aria-label="Mutaxassis sifatida ro'yxatdan o'tish">
+            <span class="material-icons notranslate" translate="no">work</span>
+            MEN MUTAXASSISMAN
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== FEATURES / STATS ===== -->
+  <section class="features-section">
+    <div class="container">
+      <h2 class="section-heading">Nima uchun bizni tanlashadi?</h2>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon-wrap">
+            <span class="material-icons notranslate" translate="no">verified</span>
+          </div>
+          <h3>Ishonchli</h3>
+          <p>Barcha mutaxassislar tekshirilgan, reyting va sharhlar mavjud.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon-wrap feature-icon-accent">
+            <span class="material-icons notranslate" translate="no">speed</span>
+          </div>
+          <h3>Tezkor</h3>
+          <p>Bir necha daqiqada kerakli mutaxassisni toping.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon-wrap feature-icon-green">
+            <span class="material-icons notranslate" translate="no">payments</span>
+          </div>
+          <h3>Bepul</h3>
+          <p>Mijozlar uchun mutlaqo bepul xizmat — hech qanday to'lov yo'q.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== TOP SPECIALISTS CAROUSEL ===== -->
+  <section class="top-carousel-section" id="top-carousel-section">
+    <div class="carousel-bg-glow"></div>
+    <div class="container">
+      <div class="carousel-header">
+        <div class="carousel-header-badge">
+          <span class="material-icons notranslate" translate="no">emoji_events</span>
+          TOP
+        </div>
+        <h2 class="section-heading">Eng Yaxshi Mutaxassislar</h2>
+        <p class="carousel-subtitle">Platformamizning eng professional va ishonchli mutaxassislari</p>
+      </div>
+
+      <div class="carousel-wrapper">
+        <button class="carousel-arrow carousel-arrow-left" id="carouselPrev" aria-label="Oldingi">
+          <span class="material-icons notranslate" translate="no">chevron_left</span>
+        </button>
+
+        <div class="carousel-track-container">
+          <div class="carousel-track" id="carouselTrack">
+            <!-- Cards will be injected by JS -->
+          </div>
+        </div>
+
+        <button class="carousel-arrow carousel-arrow-right" id="carouselNext" aria-label="Keyingi">
+          <span class="material-icons notranslate" translate="no">chevron_right</span>
+        </button>
+      </div>
+
+      <div class="carousel-dots" id="carouselDots"></div>
+
+      <div class="carousel-cta">
+        <a href="/kliyent.html" class="hero-btn hero-btn-primary">
+          <span class="material-icons notranslate" translate="no">search</span>
+          Barchasini ko'rish
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== REKLAMA ===== -->
+  <section class="container" id="ads-container" style="display:none; padding-bottom: 5rem;">
+    <h2 class="section-heading" style="margin-bottom: 2rem;">Tavsiya etamiz</h2>
+    <div class="grid grid-3" id="ads-grid"></div>
+  </section>
+  <!-- Specialist Detail Modal -->
+  <div id="specialistModal" class="modal-overlay">
+    <div class="modal-content">
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+      <div class="modal-header">
+        <div class="modal-avatar-large">
+          <img id="modalPhoto" src="" alt="">
+        </div>
+        <div class="modal-header-info">
+          <h2 id="modalName"></h2>
+          <p id="modalProfession" class="modal-profession"></p>
+          <div class="modal-badges">
+            <span id="modalCity" class="modal-badge"><span class="material-icons notranslate" translate="no">location_on</span>
+              <span></span></span>
+            <span id="modalExp" class="modal-badge"><span class="material-icons notranslate" translate="no">schedule</span> <span></span></span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-body">
+        <h3>Ma'lumot</h3>
+        <p id="modalDesc"></p>
+        <div class="modal-price-box">
+          <span class="material-icons notranslate" translate="no">payments</span>
+          <span id="modalPrice"></span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <a id="modalCallBtn" href="" class="contact-btn-main modal-call-btn">
+          <span class="material-icons notranslate" translate="no">call</span>
+          Qo'ng'iroq qilish
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scroll to Top Button -->
+  <button class="scroll-top-btn" id="scrollTopBtn" aria-label="Yuqoriga qaytish">
+    <span class="material-icons notranslate" translate="no">arrow_upward</span>
+  </button>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // ========== SPECIALIST MODAL ==========
+  const modal = document.getElementById('specialistModal');
+
+  function showSpecialistModal(s) {
+    document.getElementById('modalName').textContent = s.full_name;
+    document.getElementById('modalProfession').textContent = s.profession;
+    document.getElementById('modalPhoto').src = s.photo_url || '/static/images/default_avatar.png';
+    document.getElementById('modalCity').querySelector('span:last-child').textContent = s.city || "O'zbekiston";
+    document.getElementById('modalExp').querySelector('span:last-child').textContent = s.experience ? `${s.experience} yil tajriba` : "Tajriba ko'rsatilmagan";
+    document.getElementById('modalDesc').textContent = s.description || "Qo'shimcha ma'lumot mavjud emas.";
+    document.getElementById('modalDesc').textContent = s.description || "Qo'shimcha ma'lumot mavjud emas.";
+
+    const phone = s.phone ? s.phone.replace(/\s+/g, '') : '';
+    const callBtn = document.getElementById('modalCallBtn');
+    if (phone) {
+      callBtn.href = `tel:${phone}`;
+      callBtn.style.display = 'flex';
+    } else {
+      callBtn.style.display = 'none';
+    }
+
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden'; // Lock scroll
+  }
+
+  function closeModal() {
+    modal.classList.remove('active');
+    document.body.style.overflow = ''; // Unlock scroll
+  }
+
+  // Close on outside click
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+  });
+
+  // ========== SCROLL TO TOP ==========
+  const scrollTopBtn = document.getElementById('scrollTopBtn');
+  window.addEventListener('scroll', () => {
+    if (window.pageYOffset > 300) {
+      scrollTopBtn.classList.add('visible');
+    } else {
+      scrollTopBtn.classList.remove('visible');
+    }
+  });
+  scrollTopBtn.addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  const API_URL = window.location.origin + "/api";
+
+  // ========== ADVERTISEMENTS ==========
+  async function loadAdvertisements() {
+    try {
+      const response = await fetch(`${API_URL}/advertisements`);
+      const data = await response.json();
+      const ads = data.advertisements || [];
+      if (ads.length > 0) {
+        document.getElementById('ads-container').style.display = 'block';
+        document.getElementById('ads-grid').innerHTML = ads.map(ad => `
+          <div class="card ad-card" style="cursor: pointer;" onclick="window.open('${ad.link_url || '#'}', '_blank')" role="button" tabindex="0">
+            <h4 style="color: var(--primary); text-decoration: underline;">${ad.title}</h4>
+            <p style="font-size: 0.95rem;">${ad.description || 'Batafsil malumot'}</p>
+            <span style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-top: 0.5rem;">Reklama</span>
+          </div>
+        `).join('');
+      }
+    } catch (error) {
+      console.error('Reklama yuklashda xato:', error);
+    }
+  }
+  loadAdvertisements();
+
+  // ========== TOP SPECIALISTS CAROUSEL ==========
+  let currentSlide = 0;
+  let totalSlides = 0;
+  let autoplayInterval = null;
+  let slidesData = [];
+
+  async function loadTopSpecialists() {
+    try {
+      const resp = await fetch('/api/top_specialists');
+      const data = await resp.json();
+      slidesData = data.specialists || [];
+
+      if (slidesData.length === 0) {
+        document.getElementById('top-carousel-section').style.display = 'none';
+        return;
+      }
+
+      const track = document.getElementById('carouselTrack');
+      track.innerHTML = slidesData.map((s, i) => {
+        const photo = s.photo_url || '/static/images/default_avatar.png';
+        const topBadge = s.is_top ? '<div class="specialist-crown"><span class="material-icons notranslate" translate="no">emoji_events</span></div>' : '';
+        const expText = s.experience ? `${s.experience} yil tajriba` : '';
+        const desc = s.description ? (s.description.length > 80 ? s.description.substring(0, 80) + '...' : s.description) : '';
+        const phone = s.phone ? s.phone.replace(/\s+/g, '') : '';
+        const contactUrl = phone ? `tel:${phone}` : `https://t.me/Java2112`;
+
+        return `
+          <div class="carousel-slide" data-index="${i}">
+            <div class="specialist-card-carousel">
+              ${topBadge}
+              <div class="specialist-card-img-wrap">
+                <img src="${photo}" alt="${s.full_name}" onerror="this.src='/static/images/default_avatar.png'">
+                ${s.is_top ? '<div class="top-glow-ring"></div>' : ''}
+              </div>
+              <div class="specialist-card-body">
+                ${s.is_top ? '<span class="top-label">🏆 TOP MUTAXASSIS</span>' : ''}
+                <h4>${s.full_name}</h4>
+                <p class="specialist-profession">${s.profession}</p>
+                <p class="specialist-city"><span class="material-icons notranslate" translate="no" style="font-size:14px;vertical-align:middle;margin-right:2px;">location_on</span>${s.city || "O'zbekiston"}</p>
+                <p class="specialist-price"><span class="material-icons notranslate" translate="no" style="font-size:14px;vertical-align:middle;margin-right:2px;">payments</span>Narxi: ${s.price || "Kelishiladi"}</p>
+                ${expText ? `<p class="specialist-exp"><span class="material-icons notranslate" translate="no" style="font-size:14px;vertical-align:middle;margin-right:2px;">schedule</span>${expText}</p>` : ''}
+              </div>
+              <div class="specialist-card-footer" style="padding: 1rem; gap: 8px; flex-direction: column;">
+                <button onclick='showSpecialistModal(${JSON.stringify(s).replace(/'/g, "&apos;")})' class="btn-batafsil" style="width: 100%; padding: 8px; border-radius: 8px; border: 1.5px solid var(--primary); color: var(--primary); background: transparent; font-weight: 700; cursor: pointer;">
+                  Batafsil
+                </button>
+                <a href="${contactUrl}" class="contact-btn-main" style="margin: 0;">
+                  <span class="material-icons notranslate" translate="no" style="font-size:18px;">${phone ? 'call' : 'send'}</span> 
+                  ${phone ? "Qo'ng'iroq qilish" : "Bog'lanish"}
+                </a>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // Setup carousel
+      setupCarousel();
+    } catch (e) {
+      console.error('Top mutaxassislarni yuklash xatosi:', e);
+      document.getElementById('top-carousel-section').style.display = 'none';
+    }
+  }
+
+  function setupCarousel() {
+    const track = document.getElementById('carouselTrack');
+    const slides = track.querySelectorAll('.carousel-slide');
+    totalSlides = slides.length;
+
+    if (totalSlides <= 0) return;
+
+    // Create dots
+    const dotsContainer = document.getElementById('carouselDots');
+    dotsContainer.innerHTML = '';
+    for (let i = 0; i < totalSlides; i++) {
+      const dot = document.createElement('button');
+      dot.className = 'carousel-dot' + (i === 0 ? ' active' : '');
+      dot.setAttribute('aria-label', `Slide ${i + 1}`);
+      dot.addEventListener('click', () => goToSlide(i));
+      dotsContainer.appendChild(dot);
+    }
+
+    // Arrows
+    document.getElementById('carouselPrev').addEventListener('click', () => {
+      goToSlide(currentSlide - 1);
+      resetAutoplay();
+    });
+    document.getElementById('carouselNext').addEventListener('click', () => {
+      goToSlide(currentSlide + 1);
+      resetAutoplay();
+    });
+
+    // Touch / swipe support
+    let touchStartX = 0;
+    let touchEndX = 0;
+    track.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, { passive: true });
+    track.addEventListener('touchend', e => {
+      touchEndX = e.changedTouches[0].screenX;
+      const diff = touchStartX - touchEndX;
+      if (Math.abs(diff) > 50) {
+        if (diff > 0) goToSlide(currentSlide + 1);
+        else goToSlide(currentSlide - 1);
+        resetAutoplay();
+      }
+    });
+
+    // Start autoplay
+    startAutoplay();
+    goToSlide(0);
+  }
+
+  function goToSlide(index) {
+    if (totalSlides <= 0) return;
+    // Loop around
+    if (index < 0) index = totalSlides - 1;
+    if (index >= totalSlides) index = 0;
+    currentSlide = index;
+
+    const track = document.getElementById('carouselTrack');
+    const slides = track.querySelectorAll('.carousel-slide');
+
+    // Calculate how many cards visible
+    const containerWidth = track.parentElement.offsetWidth;
+    const slideWidth = slides[0].offsetWidth;
+    const gap = 24; // CSS gap
+    const visibleCards = Math.floor(containerWidth / (slideWidth + gap));
+
+    // Max offset so we don't scroll past the last card
+    const maxIndex = Math.max(0, totalSlides - visibleCards);
+    const clampedIndex = Math.min(currentSlide, maxIndex);
+
+    const offset = clampedIndex * (slideWidth + gap);
+    track.style.transform = `translateX(-${offset}px)`;
+
+    // Update dots
+    const dots = document.querySelectorAll('.carousel-dot');
+    dots.forEach((d, i) => d.classList.toggle('active', i === currentSlide));
+
+    // Update active slide styling
+    slides.forEach((s, i) => s.classList.toggle('active', i === currentSlide));
+  }
+
+  function startAutoplay() {
+    autoplayInterval = setInterval(() => {
+      goToSlide(currentSlide + 1);
+    }, 4000);
+  }
+
+  function resetAutoplay() {
+    clearInterval(autoplayInterval);
+    startAutoplay();
+  }
+
+  // Pause autoplay on hover
+  document.getElementById('top-carousel-section')?.addEventListener('mouseenter', () => clearInterval(autoplayInterval));
+  document.getElementById('top-carousel-section')?.addEventListener('mouseleave', () => startAutoplay());
+
+  loadTopSpecialists();
+</script>
+{% endblock %}

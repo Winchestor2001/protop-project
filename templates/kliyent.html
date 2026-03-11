@@ -1,0 +1,299 @@
+{% extends "base.html" %}
+
+{% block title %}Mijozlar uchun - ProTop{% endblock %}
+
+{% block content %}
+<!-- Hero / Header Section -->
+<section class="hero-section hero-section-new" style="padding-top: 6rem; padding-bottom: 2rem; background: none;">
+    <div class="container animate-fade-in hero-content">
+        <h1 class="hero-title"
+            style="background: var(--gradient-primary); -webkit-background-clip: text; background-clip: text; color: transparent; text-shadow: none;">
+            PREMIUM PROFESSIONALLAR</h1>
+        <p class="hero-subtitle" style="color: var(--text-secondary); text-shadow: none;">100+ kasb to'plami — mijozlar
+            uchun kerakli platforma</p>
+
+        <!-- Role Switcher -->
+        <div class="role-switcher-container">
+            <h2 class="role-switcher-title">mutaxasisi</h2>
+            <div class="role-switcher">
+                <button class="btn btn-primary" style="background: var(--gradient-primary);">mutaxasis izlash</button>
+                <a href="/ischilar.html" class="btn btn-secondary" style="border: none; background: transparent;">men
+                    mutaxasisman</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Search Section -->
+<section class="container animate-fade-in">
+    <div class="search-section">
+        <div class="search-box-wrapper">
+            <input type="text" id="searchInput" class="search-input"
+                placeholder="Kasb, ko'nikma yoki kategoriya bo'yicha qidirish...">
+            <button class="search-icon-btn">
+                <span class="material-icons notranslate" translate="no">search</span>
+            </button>
+        </div>
+
+        <p class="text-center text-muted mb-3" style="font-size: 0.9rem;">
+            <span class="material-icons notranslate" translate="no"
+                style="font-size: 1rem; vertical-align: text-bottom;">info</span>
+            Qidiruv natijalari avtomatik yangilanadi
+        </p>
+    </div>
+</section>
+
+<!-- Categories Section -->
+<section class="container animate-fade-in" style="margin-bottom: 5rem;">
+    <!-- Красивая Telegram-кнопка в оригинальном стиле -->
+    <div class="flex justify-center mb-6">
+        <a href="https://t.me/Java2112" target="_blank" class="telegram-cta-btn">
+            <span class="material-icons notranslate" translate="no"
+                style="font-size: 28px; margin-right: 10px;">send</span>
+            Kasbingiz yo'qmi?
+        </a>
+    </div>
+    <div class="animate-fade-in-up" style="animation-delay: 0.1s;">
+
+        <h2 class="text-center mb-5">Kasb Kategoriyalari</h2>
+
+        <div class="grid grid-2 animate-fade-in-up" id="categories-container" style="animation-delay: 0.2s;">
+            <div class="text-center text-muted" style="grid-column: 1/-1;">Kategoriyalar yuklanmoqda...</div>
+        </div>
+    </div>
+</section>
+
+<!-- Ads Section -->
+<section class="container" id="ads-container" style="display:none; padding-bottom: 4rem;">
+    <h4
+        style="margin-bottom: 1rem; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted);">
+        Tavsiya etamiz
+    </h4>
+    <div class="grid grid-3" id="ads-grid"></div>
+</section>
+
+<!-- Стили для кнопки (максимально близко к оригинальному Telegram) -->
+<style>
+    .telegram-cta-btn {
+        display: inline-flex;
+        align-items: center;
+        padding: 14px 32px;
+        background: linear-gradient(to right, #0088cc, #006699);
+        color: white;
+        font-weight: 600;
+        font-size: 1.1rem;
+        border-radius: var(--radius-lg);
+        text-decoration: none;
+        box-shadow: 0 4px 15px rgba(0, 136, 204, 0.4);
+        transition: all 0.3s ease;
+        border: none;
+        cursor: pointer;
+    }
+
+    .telegram-cta-btn:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(0, 136, 204, 0.55);
+        background: linear-gradient(to right, #0099e6, #007acc);
+    }
+
+    .telegram-cta-btn:active {
+        transform: translateY(1px);
+        box-shadow: 0 2px 10px rgba(0, 136, 204, 0.35);
+    }
+</style>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // --- Categories Logic with Collapsible ---
+    async function loadCategories() {
+        const container = document.getElementById('categories-container');
+        try {
+            const r = await fetch('/static/data/categories.json');
+            const data = await r.json();
+
+            if (!data.categories || !data.categories.length) {
+                container.innerHTML = '<p class="text-center">Kategoriyalar topilmadi</p>';
+                return;
+            }
+
+            container.innerHTML = data.categories.map((cat, index) => `
+                <div class="card category-card collapsed" data-category="${cat.key}">
+                    <div class="category-header" onclick="toggleCategory(this)">
+                        <div class="category-icon">
+                            <span class="material-icons notranslate" translate="no" style="font-size: 28px;">${cat.icon || getIconForCategory(cat.key)}</span>
+                        </div>
+                        <h3 style="font-size: 1.25rem; margin: 0;">${cat.title}</h3>
+                        <span class="category-count-badge notranslate" translate="no">${cat.professions.length} kasb</span>
+                        <div class="category-toggle">
+                            <span class="material-icons notranslate" translate="no">expand_more</span>
+                        </div>
+                    </div>
+                    <div class="profession-list-wrapper">
+                        <div class="profession-list">
+                            ${cat.professions.map(prof => {
+                const profName = typeof prof === 'object' ? prof.name : prof;
+                const profSkills = typeof prof === 'object' ? prof.skills : '';
+                return `
+                                    <div class="profession-item">
+                                        <div class="profession-info">
+                                            <h5>${profName}</h5>
+                                            ${profSkills ? `<div class="profession-skills">${profSkills}</div>` : ''}
+                                        </div>
+                                        <a href="/specialists.html?profession=${encodeURIComponent(profName)}&mode=client" class="btn btn-primary" style="padding: 0.6rem 1.5rem; font-size: 0.9rem; border-radius: var(--radius-md);">
+                                            Topish
+                                        </a>
+                                    </div>
+                                `;
+            }).join('')}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            // Set initial max-height for animations
+            document.querySelectorAll('.profession-list-wrapper').forEach(wrapper => {
+                wrapper.style.maxHeight = wrapper.scrollHeight + 'px';
+            });
+
+        } catch (e) {
+            console.error(e);
+            container.innerHTML = '<p class="text-center text-danger">Xatolik yuz berdi</p>';
+        }
+    }
+
+    // Toggle category open/close
+    function toggleCategory(header) {
+        const card = header.closest('.category-card');
+        const wrapper = card.querySelector('.profession-list-wrapper');
+
+        if (card.classList.contains('collapsed')) {
+            card.classList.remove('collapsed');
+            card.classList.add('expanded');
+            wrapper.style.maxHeight = wrapper.scrollHeight + 'px';
+        } else {
+            card.classList.remove('expanded');
+            card.classList.add('collapsed');
+            wrapper.style.maxHeight = '0';
+        }
+    }
+
+    // Expand all categories
+    function expandAllCategories() {
+        document.querySelectorAll('.category-card').forEach(card => {
+            const wrapper = card.querySelector('.profession-list-wrapper');
+            card.classList.remove('collapsed');
+            card.classList.add('expanded');
+            wrapper.style.maxHeight = wrapper.scrollHeight + 'px';
+        });
+    }
+
+    // Collapse all categories
+    function collapseAllCategories() {
+        document.querySelectorAll('.category-card').forEach(card => {
+            const wrapper = card.querySelector('.profession-list-wrapper');
+            card.classList.remove('expanded');
+            card.classList.add('collapsed');
+            wrapper.style.maxHeight = '0';
+        });
+    }
+
+    function getIconForCategory(key) {
+        const icons = {
+            'engineering': 'build', 'education': 'school', 'legal': 'gavel',
+            'media': 'videocam', 'it': 'code', 'design': 'palette',
+            'marketing': 'trending_up', 'business': 'business', 'health': 'favorite',
+            'construction': 'home', 'manufacturing': 'precision_manufacturing',
+            'agriculture': 'agriculture', 'transport': 'local_shipping',
+            'maintenance': 'plumbing', 'general': 'handyman'
+        };
+        return icons[key] || 'work';
+    }
+
+    // --- Search Logic with Auto-Expand ---
+    document.getElementById('searchInput').addEventListener('input', function (e) {
+        const query = e.target.value.toLowerCase().trim();
+        filterProfessions(query);
+    });
+
+    document.querySelectorAll('.search-tag').forEach(tag => {
+        tag.addEventListener('click', function () {
+            const query = this.getAttribute('data-search');
+            if (query) {
+                document.getElementById('searchInput').value = query;
+                filterProfessions(query);
+            }
+        });
+    });
+
+    function filterProfessions(query) {
+        const cards = document.querySelectorAll('.category-card');
+
+        cards.forEach(card => {
+            const items = card.querySelectorAll('.profession-item');
+            const wrapper = card.querySelector('.profession-list-wrapper');
+            let hasVisibleItems = false;
+
+            items.forEach(item => {
+                const text = item.innerText.toLowerCase();
+                if (!query || text.includes(query.toLowerCase())) {
+                    item.style.display = 'flex';
+                    hasVisibleItems = true;
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+
+            if (hasVisibleItems) {
+                card.style.display = 'block';
+                // Auto-expand when searching
+                if (query) {
+                    card.classList.remove('collapsed');
+                    card.classList.add('expanded');
+                    wrapper.style.maxHeight = wrapper.scrollHeight + 'px';
+                }
+            } else {
+                card.style.display = 'none';
+            }
+        });
+
+        // Collapse all when search is cleared
+        if (!query) {
+            collapseAllCategories();
+        }
+    }
+
+    // --- Ads Logic ---
+    const API_URL = window.location.origin + "/api";
+    async function loadAdvertisements() {
+        try {
+            const response = await fetch(`${API_URL}/advertisements`);
+            const data = await response.json();
+            const ads = data.advertisements || [];
+            if (ads.length > 0) {
+                const container = document.getElementById('ads-container');
+                const grid = document.getElementById('ads-grid');
+                grid.innerHTML = ads.map(ad => {
+                    const link = ad.link_url || '#';
+                    return `
+                        <div class="card" style="cursor: pointer;" onclick="window.open('${link}', '_blank')">
+                            <h4 style="color: var(--primary); text-decoration: underline;">${ad.title}</h4>
+                            <p style="font-size: 0.9rem;">${ad.description || 'Batafsil'}</p>
+                            <span style="font-size: 0.75rem; color: var(--text-muted);">Reklama</span>
+                        </div>
+                    `;
+                }).join('');
+                container.style.display = 'block';
+            }
+        } catch (error) {
+            console.error('Error loading advertisements:', error);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadCategories();
+        loadAdvertisements();
+    });
+</script>
+{% endblock %}

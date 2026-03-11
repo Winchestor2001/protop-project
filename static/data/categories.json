@@ -1,0 +1,514 @@
+{
+  "categories": [
+    {
+      "key": "med",
+      "title": "So’gliq ",
+      "icon": "medical_services",
+      "professions": [
+        {
+          "name": "Hamshira",
+          "skills": "\t•\tInʼeksiya qilish (ukol, sistema qo‘yish) \t•\tQon bosimi, harorat va pulsni o‘lchash \t•\tDori-darmonlarni to‘g‘ri berish va nazorat qilish \t•\tTibbiy asbob-uskunalardan foydalanish \t•\tSterilizatsiya va sanitariya qoidalariga rioya qilish \t•\tShifokor ko‘rsatmalarini aniq bajarish \t•\tBirinchi tibbiy yordam ko‘rsatish"
+        }
+      ]
+    },
+    {
+      "key": "sotuv",
+      "title": "Sotuv kategoriyala",
+      "icon": "business_center",
+      "professions": [
+        {
+          "name": "Sotuv menejeri",
+          "skills": "muloqot qila olish, muzokara olib borish, mijozlar bilan ishlash, sotuv strategiyasi, CRM bilan ishlash, vaqtni boshqarish, muammo yechish, jamoada ishlash"
+        }
+      ]
+    },
+    {
+      "key": "oshpaz",
+      "title": "Oshpazlar",
+      "icon": "restaurant",
+      "professions": [
+        {
+          "name": "Tõylar va bayramlar oshpazi",
+          "skills": "Turli hil ovqatlar tayorlash"
+        },
+        {
+          "name": "Salatchi",
+          "skills": "Zakazga salatlar"
+        },
+        {
+          "name": "Ofitsiant",
+          "skills": "Restaranlarda hizmat qilish "
+        }
+      ]
+    },
+    {
+      "key": "zzzz",
+      "title": "Mobil õyinlar",
+      "icon": "sports_esports",
+      "professions": [
+        {
+          "name": "Akaunt boosti ",
+          "skills": "Boost akaunt"
+        },
+        {
+          "name": "Donat akaunt",
+          "skills": "Donat qilish"
+        },
+        {
+          "name": "Akaunt sotuvchi",
+          "skills": "Oyindagi akauntlarni sotish"
+        }
+      ]
+    },
+    {
+      "key": "engineering",
+      "title": "Muhandislik va Texnika",
+      "professions": [
+        {
+          "name": "Elektr Muhandisi",
+          "skills": "Elektr tarmoqlari, Avtomatika, Elektr jihozlari"
+        },
+        {
+          "name": "Qurilish Muhandisi",
+          "skills": "Bino loyihalash, Qurilish nazorati, Konstruksiya"
+        },
+        {
+          "name": "Mashinasozlik Muhandisi",
+          "skills": "Mashina dizayni, CAD, 3D modellashtirish"
+        },
+        {
+          "name": "IT Infratuzilma Mutaxassisi",
+          "skills": "Server, Tarmoq, Xavfsizlik, Cloud"
+        },
+        {
+          "name": "Soatsoz Mutaxassisi",
+          "skills": "Soat ta'mirlash, Mexanizm sozlash"
+        },
+        {
+          "name": "Telefon Tamirlashchi",
+          "skills": "Telefon ta'mirlash, Ekran almashtirish, Diagnostika"
+        }
+      ]
+    },
+    {
+      "key": "education",
+      "title": "Ta'lim va Trening",
+      "professions": [
+        {
+          "name": "Online Trener",
+          "skills": "Online o'qitish, Video darslar, Mentorlik"
+        },
+        {
+          "name": "Til O'qituvchisi",
+          "skills": "Ingliz, Rus, Nemis, Fransuz tillari"
+        },
+        {
+          "name": "Musiqachi",
+          "skills": "Musiqa nazariyasi, Asbobda o'rgatish"
+        },
+        {
+          "name": "Matematika O'qituvchisi",
+          "skills": "Algebra, Geometriya, Tahlil"
+        },
+        {
+          "name": "Dasturlash O'qituvchisi",
+          "skills": "Python, JavaScript, Web dasturlash"
+        }
+      ]
+    },
+    {
+      "key": "legal",
+      "title": "Huquq va Moliya",
+      "professions": [
+        {
+          "name": "Advokat",
+          "skills": "Huquqiy maslahat, Sudda himoya, Shartnoma"
+        },
+        {
+          "name": "Buxgalter",
+          "skills": "Hisob-kitob, Soliqlar, Audit, Hisobot"
+        },
+        {
+          "name": "Moliyaviy Analitik",
+          "skills": "Investitsiya tahlili, Risk baholash, Moliyaviy rejalashtirish"
+        },
+        {
+          "name": "Soliq Konsultanti",
+          "skills": "Soliq qonunchiligi, Optimalizatsiya, Deklaratsiya"
+        },
+        {
+          "name": "Yurist",
+          "skills": "Qonunchilikni bilish, hujjatlarni tayyorlash, huquqiy tahlil, muzokara olib borish, mijozlar bilan ishlash, sudda vakillik qilish, vaqtni boshqarish, detallarga e’tibor, kasbiy etika va maxfiylikka rioya qilish."
+        }
+      ]
+    },
+    {
+      "key": "media",
+      "title": "Media va Kontent",
+      "professions": [
+        {
+          "name": "Video Montajchi",
+          "skills": "Adobe Premiere, Final Cut, DaVinci Resolve"
+        },
+        {
+          "name": "Fotograf",
+          "skills": "Suratga olish, Lightroom, Photoshop"
+        },
+        {
+          "name": "Voice Artist",
+          "skills": "Ovozli kitoblar, Dublyaj, Reklama ovozi"
+        },
+        {
+          "name": "Copywriter",
+          "skills": "Reklama matnlari, Blog, SEO yozuv"
+        },
+        {
+          "name": "Video Operator",
+          "skills": "Kamera, Yoritish, Kadrlash"
+        }
+      ]
+    },
+    {
+      "key": "it",
+      "title": "IT va Dasturlash",
+      "professions": [
+        {
+          "name": "Full Stack Dasturchi",
+          "skills": "React, Node.js, Database, API"
+        },
+        {
+          "name": "Frontend Dasturchi",
+          "skills": "HTML, CSS, JavaScript, React, Vue"
+        },
+        {
+          "name": "Backend Dasturchi",
+          "skills": "Python, Java, Node.js, Database"
+        },
+        {
+          "name": "Mobil Dasturchi",
+          "skills": "Flutter, React Native, Swift, Kotlin"
+        },
+        {
+          "name": "DevOps Muhandisi",
+          "skills": "Docker, Kubernetes, CI/CD, AWS"
+        },
+        {
+          "name": "QA Test Injeneri",
+          "skills": "Avtomatik test, Selenium, Manual test"
+        },
+        {
+          "name": "Blockchain Dasturchi",
+          "skills": "Solidity, Web3, Smart Contracts"
+        },
+        {
+          "name": "Game Dasturchi",
+          "skills": "Unity, Unreal Engine, C++, C#"
+        }
+      ]
+    },
+    {
+      "key": "design",
+      "title": "Dizayn va Grafika",
+      "professions": [
+        {
+          "name": "UI/UX Dizayner",
+          "skills": "Figma, Adobe XD, User Research, Prototyping"
+        },
+        {
+          "name": "Grafik Dizayner",
+          "skills": "Photoshop, Illustrator, Brending, Logo"
+        },
+        {
+          "name": "Motion Dizayner",
+          "skills": "After Effects, Animation, Video grafika"
+        },
+        {
+          "name": "3D Dizayner",
+          "skills": "Blender, 3ds Max, Maya, Texturing"
+        },
+        {
+          "name": "Veb Dizayner",
+          "skills": "Web layout, Responsive dizayn, CSS"
+        },
+        {
+          "name": "Illustrator",
+          "skills": "Raqamli rasm, Character dizayn, Vektor"
+        },
+        {
+          "name": "Product Dizayner",
+          "skills": "UX, Prototyping, Market research"
+        }
+      ]
+    },
+    {
+      "key": "marketing",
+      "title": "Marketing va SMM",
+      "professions": [
+        {
+          "name": "SMM Mutaxassisi",
+          "skills": "Instagram, Facebook, TikTok, Content plan"
+        },
+        {
+          "name": "SEO Mutaxassisi",
+          "skills": "Google SEO, Keyword research, Link building"
+        },
+        {
+          "name": "Content Menejer",
+          "skills": "Kontent strategiya, Copywriting, Analytics"
+        },
+        {
+          "name": "Email Marketing",
+          "skills": "Email campaigns, Mailchimp, Avtomatizatsiya"
+        },
+        {
+          "name": "PPC Mutaxassisi",
+          "skills": "Google Ads, Facebook Ads, Targeting"
+        },
+        {
+          "name": "Marketing Strategist",
+          "skills": "Brend strategiya, Market analysis, Kampaniya"
+        }
+      ]
+    },
+    {
+      "key": "business",
+      "title": "Biznes va Konsalting",
+      "professions": [
+        {
+          "name": "Biznes Konsultant",
+          "skills": "Biznes tahlil, Strategiya, Optimizatsiya"
+        },
+        {
+          "name": "Moliyaviy Konsultant",
+          "skills": "Investitsiya, Moliyaviy rejalashtirish"
+        },
+        {
+          "name": "Loyiha Menejeri",
+          "skills": "Agile, Scrum, Loyiha rejalashtirish"
+        },
+        {
+          "name": "HR Menejer",
+          "skills": "Recruitment, Onboarding, HR analytics"
+        },
+        {
+          "name": "Biznes Plan Yozuvchi",
+          "skills": "Biznes plan, Moliyaviy prognoz, Pitch deck"
+        }
+      ]
+    },
+    {
+      "key": "health",
+      "title": "Sog'liq va Fitnes",
+      "professions": [
+        {
+          "name": "Shaxsiy Trener",
+          "skills": "Fitness, Kuch mashqlari, Dastur tuzish"
+        },
+        {
+          "name": "Yoga Instruktori",
+          "skills": "Hatha yoga, Vinyasa, Meditatsiya"
+        },
+        {
+          "name": "Dietolog",
+          "skills": "Ovqatlanish rejasi, Salomatlik, Vazn nazorati"
+        },
+        {
+          "name": "Massaj Terapevti",
+          "skills": "Sport massaj, Relaksatsiya, Davolash massaji"
+        },
+        {
+          "name": "yaxshi",
+          "skills": "Umumiy salomatlik maslahat"
+        }
+      ]
+    },
+    {
+      "key": "construction",
+      "title": "Qurilish va Ta'mirlash",
+      "professions": [
+        {
+          "name": "G'isht teruvchi",
+          "skills": "Devor qurish, Pech qurish, G'isht ishlari"
+        },
+        {
+          "name": "Beton quyuvchi",
+          "skills": "Beton quyish, Fundament, Armaturlash"
+        },
+        {
+          "name": "Armaturachi",
+          "skills": "Konstruktsiya armaturlash, Metall bog'lash"
+        },
+        {
+          "name": "Payvandchi",
+          "skills": "Metall payvand, Argon payvand, Konstruktsiya"
+        },
+        {
+          "name": "Elektrik",
+          "skills": "Elektromontaj, Sim tortish, Elektr jihozlar"
+        },
+        {
+          "name": "Santexnik",
+          "skills": "Quvur o'rnatish, Kanalizatsiya, Suv tizimi"
+        },
+        {
+          "name": "Kafel teruvchi",
+          "skills": "Plitka yotqizish, Kafel, Mozaika"
+        },
+        {
+          "name": "Bo'yoqchi",
+          "skills": "Devor bo'yash, Lakka qoplash, Dekorativ bo'yoq"
+        },
+        {
+          "name": "Suvoqchi",
+          "skills": "Devor suvoq, Tekislash, Gipsokart"
+        },
+        {
+          "name": "Tom yopuvchi",
+          "skills": "Tom qoplash, Shifer, Profnastil"
+        }
+      ]
+    },
+    {
+      "key": "manufacturing",
+      "title": "Ishlab chiqarish va Zavod",
+      "professions": [
+        {
+          "name": "Tokar",
+          "skills": "Tokar stanogi, Detallar ishlov berish"
+        },
+        {
+          "name": "Frezerovshik",
+          "skills": "Frezer stanogi, Metall ishlov, Detallar"
+        },
+        {
+          "name": "Slesar",
+          "skills": "Mexanizmlar yig'ish va ta'mirlash"
+        },
+        {
+          "name": "Stanok operatori (CNC)",
+          "skills": "CNC stanok, Dasturlash, Ishlov berish"
+        },
+        {
+          "name": "Yig'uvchi",
+          "skills": "Mahsulot yig'ish, Komponentlar montaj"
+        },
+        {
+          "name": "Uskuna sozlovchi",
+          "skills": "Uskuna sozlash, Naladka, Texnik xizmat"
+        },
+        {
+          "name": "Sifat nazoratchisi",
+          "skills": "Sifat nazorati, O'lchash, Test"
+        }
+      ]
+    },
+    {
+      "key": "agriculture",
+      "title": "Qishloq xo'jaligi",
+      "professions": [
+        {
+          "name": "Traktorchi",
+          "skills": "Traktor haydash, Dala ishlari, Texnika"
+        },
+        {
+          "name": "Kombaynchi",
+          "skills": "Kombayn, Hosil yig'ish, Texnik xizmat"
+        },
+        {
+          "name": "Ferma ishchisi",
+          "skills": "Hayvonlar parvarishi, So'g'ish, Ozuqa"
+        },
+        {
+          "name": "Chorvador",
+          "skills": "Chorva yetishtirish, Vet parvarish"
+        },
+        {
+          "name": "Sabzavotchi",
+          "skills": "Sabzavot yetishtirish, Ko'chat, Parvarish"
+        },
+        {
+          "name": "Bog'bon",
+          "skills": "Daraxt ekish, Bug' parvarishi, Kesish"
+        }
+      ]
+    },
+    {
+      "key": "transport",
+      "title": "Transport va Logistika",
+      "professions": [
+        {
+          "name": "Haydovchi (yuk mashinasi, avtobus)",
+          "skills": "Yuk tashish, Yo'lovchilar tashish, Xavfsizlik"
+        },
+        {
+          "name": "Ekskavatorchi",
+          "skills": "Ekskavator, Tuproq ishlari, Qazish"
+        },
+        {
+          "name": "Kran haydovchisi",
+          "skills": "Kran, Yuk ko'tarish, Xavfsizlik"
+        },
+        {
+          "name": "Yuk ortuvchi",
+          "skills": "Yuk ortish va tushirish, Logistika"
+        },
+        {
+          "name": "Mexanik",
+          "skills": "Avtomobil ta'mirlash, Diagnostika, Zapchast"
+        }
+      ]
+    },
+    {
+      "key": "maintenance",
+      "title": "Texnik xizmat ko'rsatish",
+      "professions": [
+        {
+          "name": "Maishiy texnika ustasi",
+          "skills": "Maishiy texnika ta'mirlash, Diagnostika"
+        },
+        {
+          "name": "Sovutgich ustasi",
+          "skills": "Muzlatgich ta'mirlash, Freon quyish"
+        },
+        {
+          "name": "Gaz plita ustasi",
+          "skills": "Gaz uskunasi o'rnatish va ta'mirlash"
+        },
+        {
+          "name": "Lift mexanigi",
+          "skills": "Lift texnik xizmati, Ta'mirlash"
+        },
+        {
+          "name": "Eshik/Deraza o'rnatuvchi",
+          "skills": "Deraza va eshik o'rnatish, Sozlash"
+        },
+        {
+          "name": "Mebel yig'uvchi",
+          "skills": "Mebel yig'ish, Montaj, O'rnatish"
+        }
+      ]
+    },
+    {
+      "key": "general",
+      "title": "Turli xil va Yordamchi ishlar",
+      "professions": [
+        {
+          "name": "Mavsumiy ishchi",
+          "skills": "Turli ishlar, Jismoniy mehnat"
+        },
+        {
+          "name": "Qorovul",
+          "skills": "Binolar va hududlarni himoya qilish"
+        },
+        {
+          "name": "Farrosh",
+          "skills": "Hududlarni tozalash, Axlat yig'ish"
+        },
+        {
+          "name": "Yuk tashuvchi",
+          "skills": "Yuk ko'tarish, Tashish, Joylashtirish"
+        }
+      ]
+    }
+  ]
+}

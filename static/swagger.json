@@ -1,0 +1,992 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "ProTop API",
+    "description": "Premium Professionals platformasi uchun REST API. 100+ kasb bo'yicha mutaxassislar va mijozlarni bog'lovchi platforma.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "ProTop Support",
+      "url": "https://t.me/Java2112"
+    }
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "Current server"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "BasicAuth": {
+        "type": "http",
+        "scheme": "basic",
+        "description": "Admin login/password (ADMIN_USERNAME / ADMIN_PASSWORD)"
+      }
+    },
+    "schemas": {
+      "Specialist": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "profession": { "type": "string", "example": "Full Stack Dasturchi" },
+          "full_name": { "type": "string", "example": "Alisher Karimov" },
+          "phone": { "type": "string", "example": "+998901234567" },
+          "email": { "type": "string", "example": "alisher@example.com" },
+          "experience": { "type": "integer", "example": 5 },
+          "price": { "type": "string", "example": "50$" },
+          "free_time": { "type": "string", "example": "Dushanba-Juma, 9:00-18:00" },
+          "city": { "type": "string", "example": "Toshkent" },
+          "description": { "type": "string", "example": "Tajribali Full Stack dasturchi" },
+          "photo_url": { "type": "string", "example": "/uploads/photo.jpg" },
+          "top_order": { "type": "integer", "nullable": true, "example": 1 },
+          "created_at": { "type": "string", "example": "2024-01-15 10:30:00" }
+        }
+      },
+      "SpecialistAdmin": {
+        "allOf": [
+          { "$ref": "#/components/schemas/Specialist" },
+          {
+            "type": "object",
+            "properties": {
+              "status": { "type": "string", "nullable": true, "example": "active" },
+              "blocked_reason": { "type": "string", "nullable": true },
+              "blocked_at": { "type": "string", "nullable": true },
+              "telegram_chat_id": { "type": "integer", "nullable": true }
+            }
+          }
+        ]
+      },
+      "Advertisement": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "title": { "type": "string", "example": "Maxsus taklif" },
+          "description": { "type": "string", "example": "50% chegirma" },
+          "image_url": { "type": "string", "nullable": true },
+          "link_url": { "type": "string", "nullable": true },
+          "position": { "type": "integer", "example": 0 },
+          "is_active": { "type": "integer", "example": 1 },
+          "created_at": { "type": "string" }
+        }
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string" },
+          "email": { "type": "string" },
+          "phone": { "type": "string" },
+          "role": { "type": "string", "enum": ["client", "worker"] }
+        }
+      },
+      "Subscription": {
+        "type": "object",
+        "properties": {
+          "subscription_id": { "type": "integer" },
+          "specialist_id": { "type": "integer" },
+          "telegram_user_id": { "type": "integer", "nullable": true },
+          "full_name": { "type": "string" },
+          "phone": { "type": "string" },
+          "email": { "type": "string" },
+          "started_at": { "type": "string" },
+          "expires_at": { "type": "string" },
+          "amount": { "type": "number" },
+          "currency": { "type": "string" },
+          "profession": { "type": "string" },
+          "city": { "type": "string" },
+          "created_at": { "type": "string" }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": { "type": "string" }
+        }
+      }
+    }
+  },
+  "tags": [
+    { "name": "Specialists", "description": "Mutaxassislar bilan ishlash" },
+    { "name": "Professions", "description": "Kasblar ro'yxati" },
+    { "name": "Statistics", "description": "Platforma statistikasi" },
+    { "name": "Advertisements", "description": "Reklamalar" },
+    { "name": "Auth", "description": "Autentifikatsiya (sayt foydalanuvchilari)" },
+    { "name": "Admin - Specialists", "description": "Admin: Mutaxassislarni boshqarish" },
+    { "name": "Admin - Advertisements", "description": "Admin: Reklamalarni boshqarish" },
+    { "name": "Admin - Categories", "description": "Admin: Kategoriyalar va kasblarni boshqarish" },
+    { "name": "Admin - Broadcast", "description": "Admin: Telegram xabar yuborish" },
+    { "name": "Admin - Other", "description": "Admin: Boshqa funksiyalar" },
+    { "name": "Bot", "description": "Telegram bot ichki API" }
+  ],
+  "paths": {
+    "/api/specialists": {
+      "get": {
+        "tags": ["Specialists"],
+        "summary": "Mutaxassislar ro'yxati",
+        "description": "Barcha faol mutaxassislarni qaytaradi. Kasb bo'yicha filtrlash mumkin. Blocked va expired mutaxassislar ko'rsatilmaydi.",
+        "parameters": [
+          {
+            "name": "profession",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" },
+            "description": "Kasb bo'yicha filter",
+            "example": "Frontend Dasturchi"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Muvaffaqiyatli",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "specialists": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Specialist" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Admin - Specialists"],
+        "summary": "Yangi mutaxassis qo'shish (admin)",
+        "security": [{ "BasicAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["profession", "full_name", "phone", "email"],
+                "properties": {
+                  "profession": { "type": "string", "example": "Full Stack Dasturchi" },
+                  "full_name": { "type": "string", "example": "Alisher Karimov" },
+                  "phone": { "type": "string", "example": "+998901234567" },
+                  "email": { "type": "string", "example": "alisher@example.com" },
+                  "experience": { "type": "integer", "example": 5 },
+                  "price": { "type": "string", "example": "50$" },
+                  "free_time": { "type": "string", "example": "Dushanba-Juma, 9:00-18:00" },
+                  "city": { "type": "string", "example": "Toshkent" },
+                  "description": { "type": "string" },
+                  "photo_url": { "type": "string" },
+                  "top_order": { "type": "integer" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Mutaxassis qo'shildi" },
+          "400": { "description": "Validatsiya xatosi" },
+          "401": { "description": "Ruxsat yo'q" }
+        }
+      }
+    },
+    "/api/specialists/{id}": {
+      "get": {
+        "tags": ["Specialists"],
+        "summary": "Bitta mutaxassis ma'lumoti",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Muvaffaqiyatli",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "specialist": { "$ref": "#/components/schemas/Specialist" }
+                  }
+                }
+              }
+            }
+          },
+          "404": { "description": "Topilmadi" }
+        }
+      },
+      "put": {
+        "tags": ["Admin - Specialists"],
+        "summary": "Mutaxassisni tahrirlash (admin)",
+        "security": [{ "BasicAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "profession": { "type": "string" },
+                  "full_name": { "type": "string" },
+                  "phone": { "type": "string" },
+                  "email": { "type": "string" },
+                  "experience": { "type": "integer" },
+                  "free_time": { "type": "string" },
+                  "city": { "type": "string" },
+                  "description": { "type": "string" },
+                  "photo_url": { "type": "string" },
+                  "top_order": { "type": "integer", "nullable": true }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Yangilandi" },
+          "401": { "description": "Ruxsat yo'q" }
+        }
+      },
+      "delete": {
+        "tags": ["Admin - Specialists"],
+        "summary": "Mutaxassisni o'chirish (admin)",
+        "security": [{ "BasicAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "O'chirildi" },
+          "401": { "description": "Ruxsat yo'q" }
+        }
+      }
+    },
+    "/api/top_specialists": {
+      "get": {
+        "tags": ["Specialists"],
+        "summary": "TOP mutaxassislar (carousel uchun)",
+        "description": "Bosh sahifadagi carousel uchun top_order bo'yicha tartiblangan mutaxassislar (max 10 ta)",
+        "responses": {
+          "200": {
+            "description": "Muvaffaqiyatli",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "specialists": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "integer" },
+                          "profession": { "type": "string" },
+                          "full_name": { "type": "string" },
+                          "phone": { "type": "string" },
+                          "photo_url": { "type": "string" },
+                          "city": { "type": "string" },
+                          "description": { "type": "string" },
+                          "experience": { "type": "integer" },
+                          "is_top": { "type": "boolean" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/top_specialist": {
+      "get": {
+        "tags": ["Specialists"],
+        "summary": "Bitta TOP mutaxassis",
+        "responses": {
+          "200": {
+            "description": "Muvaffaqiyatli",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "specialist": { "$ref": "#/components/schemas/Specialist" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/professions": {
+      "get": {
+        "tags": ["Professions"],
+        "summary": "Barcha kasblar ro'yxati",
+        "description": "DB dagi barcha unique kasblarni qaytaradi",
+        "responses": {
+          "200": {
+            "description": "Muvaffaqiyatli",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "professions": {
+                      "type": "array",
+                      "items": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stats": {
+      "get": {
+        "tags": ["Statistics"],
+        "summary": "Platforma statistikasi",
+        "responses": {
+          "200": {
+            "description": "Muvaffaqiyatli",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "total_specialists": { "type": "integer" },
+                    "professions_count": { "type": "integer" },
+                    "completed_projects": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/advertisements": {
+      "get": {
+        "tags": ["Advertisements"],
+        "summary": "Faol reklamalar ro'yxati",
+        "responses": {
+          "200": {
+            "description": "Muvaffaqiyatli",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "advertisements": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Advertisement" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/signup": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Ro'yxatdan o'tish (1-qadam)",
+        "description": "Email ga tasdiqlash kodi yuboriladi",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password", "name"],
+                "properties": {
+                  "name": { "type": "string", "example": "Alisher" },
+                  "email": { "type": "string", "example": "alisher@example.com" },
+                  "phone": { "type": "string", "example": "+998901234567" },
+                  "role": { "type": "string", "enum": ["client", "worker"], "example": "worker" },
+                  "password": { "type": "string", "example": "parol123" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Kod yuborildi" },
+          "400": { "description": "Validatsiya xatosi" }
+        }
+      }
+    },
+    "/api/auth/signup/confirm": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Ro'yxatdan o'tishni tasdiqlash (2-qadam)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "code"],
+                "properties": {
+                  "email": { "type": "string" },
+                  "code": { "type": "string", "example": "123456" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Foydalanuvchi yaratildi",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": { "$ref": "#/components/schemas/User" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Noto'g'ri kod" }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Tizimga kirish",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": { "type": "string", "example": "alisher@example.com" },
+                  "password": { "type": "string", "example": "parol123" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Muvaffaqiyatli kirish",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": { "$ref": "#/components/schemas/User" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Noto'g'ri ma'lumotlar" }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "tags": ["Auth"],
+        "summary": "Joriy foydalanuvchi ma'lumoti",
+        "responses": {
+          "200": {
+            "description": "Foydalanuvchi yoki null",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": { "$ref": "#/components/schemas/User" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Tizimdan chiqish",
+        "responses": {
+          "200": { "description": "Chiqildi" }
+        }
+      }
+    },
+    "/api/admin/specialists/list": {
+      "get": {
+        "tags": ["Admin - Specialists"],
+        "summary": "Barcha mutaxassislar (blocked/expired ham)",
+        "security": [{ "BasicAuth": [] }],
+        "parameters": [
+          {
+            "name": "profession",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Muvaffaqiyatli",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "specialists": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/SpecialistAdmin" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Ruxsat yo'q" }
+        }
+      }
+    },
+    "/api/admin/specialists/{id}/block": {
+      "post": {
+        "tags": ["Admin - Specialists"],
+        "summary": "Mutaxassisni bloklash",
+        "security": [{ "BasicAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["reason"],
+                "properties": {
+                  "reason": { "type": "string", "example": "Qoidalar buzildi" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Bloklandi" },
+          "401": { "description": "Ruxsat yo'q" },
+          "404": { "description": "Topilmadi" }
+        }
+      }
+    },
+    "/api/admin/specialists/{id}/unblock": {
+      "post": {
+        "tags": ["Admin - Specialists"],
+        "summary": "Mutaxassisni blokdan chiqarish",
+        "security": [{ "BasicAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "Blokdan chiqarildi" },
+          "401": { "description": "Ruxsat yo'q" },
+          "404": { "description": "Topilmadi" }
+        }
+      }
+    },
+    "/api/admin/set_top_specialist": {
+      "post": {
+        "tags": ["Admin - Specialists"],
+        "summary": "TOP mutaxassisni belgilash",
+        "security": [{ "BasicAuth": [] }],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "specialist_id": { "type": "integer" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Yangilandi" },
+          "401": { "description": "Ruxsat yo'q" }
+        }
+      }
+    },
+    "/api/admin/remove_top_specialist": {
+      "post": {
+        "tags": ["Admin - Specialists"],
+        "summary": "TOP mutaxassisni olib tashlash",
+        "security": [{ "BasicAuth": [] }],
+        "responses": {
+          "200": { "description": "Olib tashlandi" },
+          "401": { "description": "Ruxsat yo'q" }
+        }
+      }
+    },
+    "/api/admin/subscriptions": {
+      "get": {
+        "tags": ["Admin - Other"],
+        "summary": "Obunalar/to'lovlar ro'yxati",
+        "security": [{ "BasicAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Muvaffaqiyatli",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "subscriptions": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Subscription" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Ruxsat yo'q" }
+        }
+      }
+    },
+    "/api/admin/referral_stats": {
+      "get": {
+        "tags": ["Admin - Other"],
+        "summary": "Referral statistikasi",
+        "security": [{ "BasicAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Muvaffaqiyatli",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "referral_stats": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "user_id": { "type": "integer" },
+                          "username": { "type": "string" },
+                          "first_name": { "type": "string" },
+                          "referral_count": { "type": "integer" },
+                          "activated_count": { "type": "integer" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Ruxsat yo'q" }
+        }
+      }
+    },
+    "/api/admin/advertisements": {
+      "get": {
+        "tags": ["Admin - Advertisements"],
+        "summary": "Barcha reklamalar (faol va nofaol)",
+        "security": [{ "BasicAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Muvaffaqiyatli",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "advertisements": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Advertisement" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Ruxsat yo'q" }
+        }
+      },
+      "post": {
+        "tags": ["Admin - Advertisements"],
+        "summary": "Yangi reklama yaratish",
+        "security": [{ "BasicAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["title"],
+                "properties": {
+                  "title": { "type": "string", "example": "Maxsus taklif" },
+                  "description": { "type": "string" },
+                  "image_url": { "type": "string" },
+                  "link_url": { "type": "string" },
+                  "position": { "type": "integer", "example": 0 },
+                  "is_active": { "type": "boolean", "example": true }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Yaratildi" },
+          "401": { "description": "Ruxsat yo'q" }
+        }
+      }
+    },
+    "/api/admin/advertisements/{id}": {
+      "put": {
+        "tags": ["Admin - Advertisements"],
+        "summary": "Reklamani yangilash",
+        "security": [{ "BasicAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": { "type": "string" },
+                  "description": { "type": "string" },
+                  "image_url": { "type": "string" },
+                  "link_url": { "type": "string" },
+                  "position": { "type": "integer" },
+                  "is_active": { "type": "boolean" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Yangilandi" },
+          "401": { "description": "Ruxsat yo'q" }
+        }
+      },
+      "delete": {
+        "tags": ["Admin - Advertisements"],
+        "summary": "Reklamani o'chirish",
+        "security": [{ "BasicAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "O'chirildi" },
+          "401": { "description": "Ruxsat yo'q" }
+        }
+      }
+    },
+    "/api/admin/professions": {
+      "post": {
+        "tags": ["Admin - Categories"],
+        "summary": "Yangi kasb qo'shish",
+        "security": [{ "BasicAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["prof_name", "category"],
+                "properties": {
+                  "prof_name": { "type": "string", "example": "Data Scientist" },
+                  "skills": { "type": "string", "example": "Python, ML, AI" },
+                  "category": { "type": "string", "example": "it" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Qo'shildi" },
+          "400": { "description": "Xatolik" },
+          "401": { "description": "Ruxsat yo'q" }
+        }
+      }
+    },
+    "/api/admin/categories": {
+      "post": {
+        "tags": ["Admin - Categories"],
+        "summary": "Yangi kategoriya yaratish",
+        "security": [{ "BasicAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["title", "key"],
+                "properties": {
+                  "title": { "type": "string", "example": "Yangi kategoriya" },
+                  "key": { "type": "string", "example": "yangi_kat" },
+                  "icon": { "type": "string", "example": "work" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Yaratildi" },
+          "400": { "description": "Xatolik" },
+          "401": { "description": "Ruxsat yo'q" }
+        }
+      }
+    },
+    "/api/admin/categories/{category_key}": {
+      "delete": {
+        "tags": ["Admin - Categories"],
+        "summary": "Kategoriyani o'chirish",
+        "security": [{ "BasicAuth": [] }],
+        "parameters": [
+          { "name": "category_key", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "O'chirildi" },
+          "401": { "description": "Ruxsat yo'q" },
+          "404": { "description": "Topilmadi" }
+        }
+      }
+    },
+    "/api/admin/broadcast": {
+      "post": {
+        "tags": ["Admin - Broadcast"],
+        "summary": "Barcha Telegram foydalanuvchilarga xabar yuborish",
+        "security": [{ "BasicAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["message"],
+                "properties": {
+                  "message": { "type": "string", "example": "Yangi xususiyat qo'shildi!" },
+                  "image_url": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Yuborildi" },
+          "401": { "description": "Ruxsat yo'q" }
+        }
+      }
+    },
+    "/api/admin/targeted-broadcast": {
+      "post": {
+        "tags": ["Admin - Broadcast"],
+        "summary": "Tanlangan foydalanuvchilarga xabar yuborish",
+        "security": [{ "BasicAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["message", "chat_ids"],
+                "properties": {
+                  "message": { "type": "string" },
+                  "image_url": { "type": "string" },
+                  "chat_ids": {
+                    "type": "array",
+                    "items": { "type": "integer" },
+                    "example": [123456789, 987654321]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Yuborildi" },
+          "401": { "description": "Ruxsat yo'q" }
+        }
+      }
+    },
+    "/api/bot/specialists": {
+      "post": {
+        "tags": ["Bot"],
+        "summary": "Telegram bot orqali mutaxassis qo'shish",
+        "description": "X-Bot-Token header talab qilinadi. Avtomatik trial boshlanadi.",
+        "parameters": [
+          {
+            "name": "X-Bot-Token",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "profession": { "type": "string" },
+                  "full_name": { "type": "string" },
+                  "phone": { "type": "string" },
+                  "email": { "type": "string" },
+                  "experience": { "type": "integer" },
+                  "free_time": { "type": "string" },
+                  "city": { "type": "string" },
+                  "description": { "type": "string" },
+                  "photo_url": { "type": "string" },
+                  "telegram_chat_id": { "type": "integer" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Qo'shildi" },
+          "403": { "description": "Taqiqlangan" }
+        }
+      }
+    },
+    "/api/bot/specialists/{id}/activate": {
+      "post": {
+        "tags": ["Bot"],
+        "summary": "Mutaxassisni faollashtirish (to'lov tasdiqlangandan keyin)",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } },
+          { "name": "X-Bot-Token", "in": "header", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "telegram_user_id": { "type": "integer" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Faollashtirildi" },
+          "403": { "description": "Taqiqlangan" },
+          "404": { "description": "Topilmadi" }
+        }
+      }
+    }
+  }
+}
