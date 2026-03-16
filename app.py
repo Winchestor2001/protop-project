@@ -17,12 +17,14 @@ import base64
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app)  # Разрешаем CORS для работы с фронтендом
+CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True,
+     allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-change-me')
 
 # ---- Swagger UI ----
 SWAGGER_URL = '/swagger'
-API_URL = '/static/swagger.json'
+API_URL = '/api/swagger.json'
 SWAGGER_ADMIN_USER = os.environ.get('ADMIN_USERNAME', '')
 SWAGGER_ADMIN_PASS = os.environ.get('ADMIN_PASSWORD', '')
 
@@ -48,11 +50,22 @@ swaggerui_blueprint = get_swaggerui_blueprint(
 )
 app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
 
+@app.route('/api/swagger.json')
+def swagger_json():
+    return send_from_directory(app.static_folder, 'swagger.json')
+
 import db
 
 DATABASE = 'protop_db' # MySQL DB name from env
 UPLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+@app.after_request
+def add_cors_headers(response):
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With'
+    return response
 
 def init_db():
     db.init_db()
