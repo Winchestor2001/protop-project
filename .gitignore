@@ -45,4 +45,5 @@ specialists.db
 .env
 .env.local
 
+.vscode
 .claude
