@@ -22,6 +22,7 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+.idea
 
 # Database
 *.db
@@ -43,3 +44,5 @@ specialists.db
 # Environment variables
 .env
 .env.local
+
+.claude
