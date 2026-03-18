@@ -24,7 +24,7 @@ app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-change-me')
 
 # ---- Swagger UI ----
 SWAGGER_URL = '/swagger'
-API_URL = '/api/swagger.json'
+API_URL = '/swagger/swagger.json'
 SWAGGER_ADMIN_USER = os.environ.get('ADMIN_USERNAME', '')
 SWAGGER_ADMIN_PASS = os.environ.get('ADMIN_PASSWORD', '')
 
@@ -50,6 +50,7 @@ swaggerui_blueprint = get_swaggerui_blueprint(
 )
 app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
 
+@app.route('/swagger/swagger.json')
 @app.route('/api/swagger.json')
 def swagger_json():
     return send_from_directory(app.static_folder, 'swagger.json')
