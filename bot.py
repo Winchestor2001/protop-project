@@ -117,14 +117,62 @@ async def post_init(application: Application):
     except Exception as e:
         log.warning(f"Could not set bot description: {e}")
 
+async def handle_mobile_auth(update: Update, context: ContextTypes.DEFAULT_TYPE, token: str):
+    """Mobile ilovadan kelgan auth tokenni tasdiqlash."""
+    user = update.effective_user
+    try:
+        async with aiohttp.ClientSession() as session:
+            headers = {'X-Bot-Token': os.environ.get('BOT_API_KEY', '')}
+            payload = {
+                'token': token,
+                'telegram_user_id': user.id,
+                'username': user.username or '',
+                'first_name': user.first_name or '',
+                'last_name': user.last_name or '',
+            }
+            async with session.post(
+                f"{API_BASE.rstrip('/')}/mobile/auth/confirm",
+                json=payload,
+                headers=headers
+            ) as r:
+                if r.status == 200:
+                    await update.message.reply_text(
+                        "✅ Tizimga muvaffaqiyatli kirdingiz!\n"
+                        "Endi mobile ilovaga qaytishingiz mumkin.\n\n"
+                        "✅ Вы успешно вошли в систему!\n"
+                        "Теперь вы можете вернуться в мобильное приложение."
+                    )
+                elif r.status == 404:
+                    await update.message.reply_text(
+                        "❌ Bu havola eskirgan yoki noto'g'ri.\n"
+                        "Iltimos, ilovada qaytadan urinib ko'ring.\n\n"
+                        "❌ Эта ссылка устарела или недействительна.\n"
+                        "Пожалуйста, попробуйте снова в приложении."
+                    )
+                else:
+                    await update.message.reply_text(
+                        "❌ Xatolik yuz berdi. Iltimos, qayta urinib ko'ring."
+                    )
+    except Exception as e:
+        log.exception(f"Mobile auth error: {e}")
+        await update.message.reply_text(
+            "❌ Xatolik yuz berdi. Iltimos, qayta urinib ko'ring."
+        )
+
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Deep-linking: /start ref_USERID or pro_SOMETHING
+    # Deep-linking: /start ref_USERID or pro_SOMETHING or auth_TOKEN
     args = context.args
     pro = None
     referrer_id = None
     if args:
         joined = ' '.join(args)
-        if joined.startswith('pro_'):
+        if joined.startswith('auth_'):
+            # Mobile auth deep link
+            auth_token = joined[5:]
+            await handle_mobile_auth(update, context, auth_token)
+            return
+        elif joined.startswith('pro_'):
             pro = joined[4:].replace('_', ' ')
         elif joined.startswith('ref_'):
             try:

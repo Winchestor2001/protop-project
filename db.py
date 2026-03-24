@@ -156,7 +156,22 @@ def init_db():
                 )
             """)
 
-            # 7. ADVERTISEMENTS
+            # 7. MOBILE AUTH SESSIONS
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS mobile_auth_sessions (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    token VARCHAR(64) UNIQUE NOT NULL,
+                    telegram_user_id BIGINT,
+                    username TEXT,
+                    first_name TEXT,
+                    last_name TEXT,
+                    status VARCHAR(20) DEFAULT 'pending',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    confirmed_at TIMESTAMP NULL
+                )
+            """)
+
+            # 8. ADVERTISEMENTS
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS advertisements (
                     id INT AUTO_INCREMENT PRIMARY KEY,

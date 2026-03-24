@@ -1900,6 +1900,7 @@ def admin_delete_profession():
 
 TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN', '')
 ADMIN_TELEGRAM_ID = os.environ.get('ADMIN_TELEGRAM_ID', '')
+BOT_USERNAME = os.environ.get('BOT_USERNAME', '')  # Bot username (without @)
 
 
 def send_telegram_message(chat_id, text, reply_markup=None):
@@ -2151,6 +2152,147 @@ def mobile_get_specialist_status():
         })
 
     return jsonify({'registered': False, 'application': None})
+
+
+# ---- Mobile Telegram Auth ----
+
+@app.route('/api/mobile/auth/init', methods=['POST'])
+def mobile_auth_init():
+    """Telegram orqali auth sessiyasini boshlash.
+
+    Mobile ilova bu endpointni chaqiradi va qaytgan deep_link ni ochadi.
+    User Telegram botda "Start" bosganidan keyin auth tasdiqlangan bo'ladi.
+
+    Returns:
+        token: Auth sessiya tokeni
+        deep_link: Telegram deep link (foydalanuvchi uchun)
+    """
+    import secrets
+    token = secrets.token_hex(32)
+
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            "INSERT INTO mobile_auth_sessions (token, status) VALUES (%s, 'pending')",
+            (token,)
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+    # Bot username ni aniqlash
+    bot_username = BOT_USERNAME
+    if not bot_username and TELEGRAM_BOT_TOKEN:
+        try:
+            resp = requests.get(
+                f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getMe",
+                timeout=5
+            )
+            data = resp.json()
+            if data.get('ok'):
+                bot_username = data['result']['username']
+        except Exception:
+            pass
+
+    deep_link = f"https://t.me/{bot_username}?start=auth_{token}" if bot_username else None
+
+    return jsonify({
+        'token': token,
+        'deep_link': deep_link
+    })
+
+
+@app.route('/api/mobile/auth/check', methods=['GET'])
+def mobile_auth_check():
+    """Auth sessiya holatini tekshirish (mobile ilova polling qiladi).
+
+    Query params:
+        token (required): Auth sessiya tokeni
+
+    Returns:
+        status: 'pending' | 'confirmed'
+        user: Telegram user ma'lumotlari (agar confirmed bo'lsa)
+    """
+    token = request.args.get('token')
+    if not token:
+        return jsonify({'error': 'token parametri majburiy'}), 400
+
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM mobile_auth_sessions WHERE token = %s", (token,))
+    row = cur.fetchone()
+    conn.close()
+
+    if not row:
+        return jsonify({'error': 'Token topilmadi'}), 404
+
+    # Eskirgan tokenlarni tekshirish (10 daqiqadan oshsa)
+    created = row['created_at']
+    if isinstance(created, str):
+        created = datetime.fromisoformat(created)
+    if datetime.utcnow() - created > timedelta(minutes=10):
+        return jsonify({'status': 'expired'}), 410
+
+    if row['status'] == 'confirmed':
+        return jsonify({
+            'status': 'confirmed',
+            'user': {
+                'telegram_user_id': row['telegram_user_id'],
+                'username': row['username'],
+                'first_name': row['first_name'],
+                'last_name': row['last_name'],
+            }
+        })
+
+    return jsonify({'status': 'pending'})
+
+
+@app.route('/api/mobile/auth/confirm', methods=['POST'])
+def mobile_auth_confirm():
+    """Bot tomonidan auth sessiyani tasdiqlash (ichki endpoint).
+
+    Bot /start auth_TOKEN qabul qilganda bu endpointni chaqiradi.
+    """
+    bot_key = request.headers.get('X-Bot-Token', '')
+    if not bot_key or bot_key != os.environ.get('BOT_API_KEY', ''):
+        return jsonify({'error': 'Forbidden'}), 403
+
+    data = request.get_json() or {}
+    token = data.get('token')
+    telegram_user_id = data.get('telegram_user_id')
+
+    if not token or not telegram_user_id:
+        return jsonify({'error': 'token va telegram_user_id majburiy'}), 400
+
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM mobile_auth_sessions WHERE token = %s AND status = 'pending'", (token,))
+    row = cur.fetchone()
+
+    if not row:
+        conn.close()
+        return jsonify({'error': 'Token topilmadi yoki allaqachon tasdiqlangan'}), 404
+
+    try:
+        cur.execute('''
+            UPDATE mobile_auth_sessions
+            SET status = 'confirmed', telegram_user_id = %s, username = %s,
+                first_name = %s, last_name = %s, confirmed_at = %s
+            WHERE token = %s
+        ''', (
+            telegram_user_id,
+            data.get('username', ''),
+            data.get('first_name', ''),
+            data.get('last_name', ''),
+            datetime.utcnow().isoformat(),
+            token
+        ))
+        conn.commit()
+    finally:
+        conn.close()
+
+    return jsonify({'success': True})
 
 
 if __name__ == '__main__':
