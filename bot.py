@@ -1293,7 +1293,8 @@ def main():
             cur.execute("SELECT * FROM applications WHERE id=%s", (app_id,))
             row = cur.fetchone()
             if row:
-                cur.execute("UPDATE applications SET status='rejected' WHERE id=%s", (app_id,))
+                # Inkor qilingan arizani DB dan o'chirish
+                cur.execute("DELETE FROM applications WHERE id=%s", (app_id,))
                 conn.commit()
                 try:
                     await context.bot.send_message(chat_id=row['user_id'], text=f"Kechirasiz, arizangiz rad etildi. Sabab: {text}")
@@ -1302,7 +1303,7 @@ def main():
                         await context.bot.send_sticker(chat_id=row['user_id'], sticker=REJECTED_STICKER)
                 except Exception:
                     pass
-                await update.message.reply_text("Rad etish sababi yuborildi ✔️")
+                await update.message.reply_text("Rad etish sababi yuborildi va ariza o'chirildi ✔️")
             conn.close()
             return
 

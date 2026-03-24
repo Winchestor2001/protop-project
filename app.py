@@ -1896,6 +1896,263 @@ def admin_delete_profession():
         return jsonify({'error': str(e)}), 500
 
 
+# ---- Mobile API endpoints ----
+
+TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN', '')
+ADMIN_TELEGRAM_ID = os.environ.get('ADMIN_TELEGRAM_ID', '')
+
+
+def send_telegram_message(chat_id, text, reply_markup=None):
+    """Telegram Bot API orqali xabar yuborish."""
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    payload = {
+        'chat_id': chat_id,
+        'text': text,
+        'parse_mode': 'HTML',
+    }
+    if reply_markup:
+        import json
+        payload['reply_markup'] = json.dumps(reply_markup)
+    try:
+        resp = requests.post(url, json=payload, timeout=10)
+        return resp.json()
+    except Exception as e:
+        print(f"Telegram xabar yuborishda xatolik: {e}")
+        return None
+
+
+def send_telegram_photo(chat_id, photo_path, caption, reply_markup=None):
+    """Telegram Bot API orqali rasm yuborish."""
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendPhoto"
+    data = {
+        'chat_id': chat_id,
+        'caption': caption,
+        'parse_mode': 'HTML',
+    }
+    if reply_markup:
+        import json
+        data['reply_markup'] = json.dumps(reply_markup)
+    try:
+        with open(photo_path, 'rb') as f:
+            resp = requests.post(url, data=data, files={'photo': f}, timeout=15)
+        return resp.json()
+    except Exception as e:
+        print(f"Telegram rasm yuborishda xatolik: {e}")
+        return None
+
+
+@app.route('/api/mobile/application', methods=['POST'])
+def mobile_submit_application():
+    """Mobile ilovadan mutaxassis arizasi qabul qilish.
+
+    Form data (multipart/form-data):
+        - telegram_user_id (required): Telegram user ID
+        - username: Telegram username
+        - profession (required): Kasbi
+        - full_name (required): To'liq ismi
+        - phone (required): Telefon raqami
+        - city: Shahar
+        - experience: Tajriba (yil)
+        - price: Narxi
+        - free_time: Bo'sh vaqti
+        - description: Tavsif
+        - photo: Rasm fayli (optional)
+    """
+    # Form data olish (multipart/form-data yoki JSON)
+    if request.content_type and 'multipart/form-data' in request.content_type:
+        data = request.form.to_dict()
+        photo = request.files.get('photo')
+    elif request.is_json:
+        data = request.get_json() or {}
+        photo = None
+    else:
+        return jsonify({'error': 'Content-Type multipart/form-data yoki application/json bo\'lishi kerak'}), 400
+
+    # Majburiy maydonlar tekshirish
+    telegram_user_id = data.get('telegram_user_id')
+    profession = data.get('profession', '').strip()
+    full_name = data.get('full_name', '').strip()
+    phone = data.get('phone', '').strip()
+
+    if not telegram_user_id:
+        return jsonify({'error': 'telegram_user_id majburiy'}), 400
+    if not profession:
+        return jsonify({'error': 'profession majburiy'}), 400
+    if not full_name:
+        return jsonify({'error': 'full_name majburiy'}), 400
+    if not phone:
+        return jsonify({'error': 'phone majburiy'}), 400
+
+    try:
+        telegram_user_id = int(telegram_user_id)
+    except (ValueError, TypeError):
+        return jsonify({'error': 'telegram_user_id raqam bo\'lishi kerak'}), 400
+
+    # Sanitize
+    profession = sanitize_input(profession, 200)
+    full_name = sanitize_input(full_name, 100)
+    phone = sanitize_input(phone, 30)
+    username = sanitize_input(data.get('username', ''), 100)
+    city = sanitize_input(data.get('city', ''), 100)
+    experience = int(data.get('experience') or 0)
+    price = sanitize_input(data.get('price', 'Kelishiladi'), 100)
+    free_time = sanitize_input(data.get('free_time', ''), 200)
+    description = sanitize_input(data.get('description', ''), 1000)
+
+    # Avval shu user uchun pending ariza borligini tekshirish
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT id FROM applications WHERE user_id = %s AND status = 'pending'",
+        (telegram_user_id,)
+    )
+    existing = cur.fetchone()
+    if existing:
+        conn.close()
+        return jsonify({'error': 'Sizda allaqachon ko\'rib chiqilayotgan ariza mavjud', 'application_id': existing['id']}), 409
+
+    # Rasm saqlash
+    photo_path = ''
+    if photo and photo.filename:
+        import uuid
+        ext = os.path.splitext(photo.filename)[1] or '.jpg'
+        filename = f"app_{telegram_user_id}_{uuid.uuid4().hex[:8]}{ext}"
+        photo_path = os.path.join(UPLOAD_DIR, filename)
+        photo.save(photo_path)
+    elif data.get('photo_base64'):
+        # Base64 formatda rasm qabul qilish (mobile uchun qulay)
+        import uuid
+        try:
+            img_data = base64.b64decode(data['photo_base64'])
+            filename = f"app_{telegram_user_id}_{uuid.uuid4().hex[:8]}.jpg"
+            photo_path = os.path.join(UPLOAD_DIR, filename)
+            with open(photo_path, 'wb') as f:
+                f.write(img_data)
+        except Exception:
+            pass
+
+    # DB ga saqlash
+    try:
+        cur.execute('''
+            INSERT INTO applications (user_id, username, profession, full_name, phone, city, experience, price, free_time, description, photo_path, status)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'pending')
+        ''', (
+            telegram_user_id, username, profession, full_name, phone,
+            city, experience, price, free_time, description, photo_path
+        ))
+        app_id = cur.lastrowid
+        conn.commit()
+    except Exception as e:
+        conn.close()
+        print(f"DB xatolik: {e}")
+        return jsonify({'error': 'Arizani saqlashda xatolik'}), 500
+    finally:
+        conn.close()
+
+    # Adminga Telegram orqali xabar yuborish
+    if ADMIN_TELEGRAM_ID:
+        caption = (
+            f"<b>Yangi ariza #{app_id}</b> (Mobile)\n\n"
+            f"<b>Kasb:</b> {profession}\n"
+            f"<b>F.I.Sh.:</b> {full_name}\n"
+            f"<b>Tel:</b> {phone}\n"
+            f"<b>Shahar:</b> {city or 'Online'}\n"
+            f"<b>Tajriba:</b> {experience} yil\n"
+            f"<b>Narx:</b> {price}\n"
+            f"<b>Vaqt:</b> {free_time or '-'}\n\n"
+            f"{description or ''}"
+        )
+        inline_keyboard = {
+            'inline_keyboard': [[
+                {'text': '\u2705 Qabul qilish', 'callback_data': f'approve:{app_id}'},
+                {'text': '\u274c Inkor qilish', 'callback_data': f'reject:{app_id}'}
+            ]]
+        }
+        if photo_path and os.path.exists(photo_path):
+            send_telegram_photo(ADMIN_TELEGRAM_ID, photo_path, caption, inline_keyboard)
+        else:
+            send_telegram_message(ADMIN_TELEGRAM_ID, caption, inline_keyboard)
+
+    return jsonify({
+        'success': True,
+        'message': 'Arizangiz qabul qilindi. Admin ko\'rib chiqadi.',
+        'application_id': app_id
+    }), 201
+
+
+@app.route('/api/mobile/application/<int:app_id>', methods=['GET'])
+def mobile_get_application_status(app_id):
+    """Ariza holatini tekshirish."""
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT id, status, created_at FROM applications WHERE id = %s", (app_id,))
+    row = cur.fetchone()
+    conn.close()
+    if not row:
+        return jsonify({'error': 'Ariza topilmadi'}), 404
+    return jsonify({
+        'application_id': row['id'],
+        'status': row['status'],
+        'created_at': str(row['created_at'])
+    })
+
+
+@app.route('/api/mobile/specialist/status', methods=['GET'])
+def mobile_get_specialist_status():
+    """Telegram user ID bo'yicha mutaxassis holatini tekshirish."""
+    telegram_user_id = request.args.get('telegram_user_id')
+    if not telegram_user_id:
+        return jsonify({'error': 'telegram_user_id parametri majburiy'}), 400
+    try:
+        telegram_user_id = int(telegram_user_id)
+    except (ValueError, TypeError):
+        return jsonify({'error': 'telegram_user_id raqam bo\'lishi kerak'}), 400
+
+    conn = get_db()
+    cur = conn.cursor()
+
+    # Avval specialist jadvalida bor-yo'qligini tekshirish
+    cur.execute("SELECT * FROM specialists WHERE telegram_chat_id = %s", (telegram_user_id,))
+    specialist = cur.fetchone()
+    if specialist:
+        conn.close()
+        return jsonify({
+            'registered': True,
+            'specialist': {
+                'id': specialist['id'],
+                'profession': specialist['profession'],
+                'full_name': specialist['full_name'],
+                'phone': specialist['phone'],
+                'status': specialist['status'],
+                'city': specialist['city'],
+                'photo_url': specialist['photo_url'],
+                'trial_expires_at': specialist['trial_expires_at'],
+                'paid_until': specialist['paid_until'],
+                'created_at': str(specialist['created_at'])
+            }
+        })
+
+    # Arizasi borligini tekshirish
+    cur.execute(
+        "SELECT id, status, created_at FROM applications WHERE user_id = %s ORDER BY created_at DESC LIMIT 1",
+        (telegram_user_id,)
+    )
+    application = cur.fetchone()
+    conn.close()
+
+    if application:
+        return jsonify({
+            'registered': False,
+            'application': {
+                'id': application['id'],
+                'status': application['status'],
+                'created_at': str(application['created_at'])
+            }
+        })
+
+    return jsonify({'registered': False, 'application': None})
+
+
 if __name__ == '__main__':
     # Initialize DB if needed
     if not os.path.exists(DATABASE) or os.path.getsize(DATABASE) == 0:
