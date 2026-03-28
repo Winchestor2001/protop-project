@@ -116,7 +116,9 @@
     { "name": "Admin - Categories", "description": "Admin: Kategoriyalar va kasblarni boshqarish" },
     { "name": "Admin - Broadcast", "description": "Admin: Telegram xabar yuborish" },
     { "name": "Admin - Other", "description": "Admin: Boshqa funksiyalar" },
-    { "name": "Bot", "description": "Telegram bot ichki API" }
+    { "name": "Bot", "description": "Telegram bot ichki API" },
+    { "name": "Mobile - Auth", "description": "Mobile ilova uchun Telegram orqali autentifikatsiya" },
+    { "name": "Mobile - Application", "description": "Mobile ilova orqali mutaxassis arizasi" }
   ],
   "paths": {
     "/api/specialists": {
@@ -985,6 +987,270 @@
           "200": { "description": "Faollashtirildi" },
           "403": { "description": "Taqiqlangan" },
           "404": { "description": "Topilmadi" }
+        }
+      }
+    },
+    "/api/mobile/auth/init": {
+      "post": {
+        "tags": ["Mobile - Auth"],
+        "summary": "Telegram orqali auth sessiyasini boshlash",
+        "description": "Mobile ilova bu endpointni chaqiradi. Qaytgan deep_link ni ochib, foydalanuvchi Telegram botda 'Start' bosadi. Keyin /api/mobile/auth/check orqali polling qilinadi.",
+        "responses": {
+          "200": {
+            "description": "Auth sessiya yaratildi",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token": { "type": "string", "example": "a1b2c3d4e5f6..." },
+                    "deep_link": { "type": "string", "example": "https://t.me/ProTopBot?start=auth_a1b2c3d4e5f6..." }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/mobile/auth/check": {
+      "get": {
+        "tags": ["Mobile - Auth"],
+        "summary": "Auth sessiya holatini tekshirish (polling)",
+        "description": "Mobile ilova bu endpointni har 2-3 sekundda chaqirib turadi. Foydalanuvchi Telegram botda tasdiqlasa, status 'confirmed' bo'ladi.",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Auth sessiya tokeni (/api/mobile/auth/init dan olingan)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sessiya holati",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string", "enum": ["pending", "confirmed"], "example": "confirmed" },
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "telegram_user_id": { "type": "integer", "example": 123456789 },
+                        "username": { "type": "string", "example": "alisher_dev" },
+                        "first_name": { "type": "string", "example": "Alisher" },
+                        "last_name": { "type": "string", "example": "Karimov" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": { "description": "Token topilmadi" },
+          "410": { "description": "Token muddati tugagan (10 daqiqadan oshgan)" }
+        }
+      }
+    },
+    "/api/mobile/auth/confirm": {
+      "post": {
+        "tags": ["Mobile - Auth"],
+        "summary": "Auth sessiyani tasdiqlash (bot ichki endpoint)",
+        "description": "Telegram bot /start auth_TOKEN qabul qilganda bu endpointni chaqiradi. X-Bot-Token header talab qilinadi.",
+        "parameters": [
+          {
+            "name": "X-Bot-Token",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["token", "telegram_user_id"],
+                "properties": {
+                  "token": { "type": "string", "example": "a1b2c3d4e5f6..." },
+                  "telegram_user_id": { "type": "integer", "example": 123456789 },
+                  "username": { "type": "string", "example": "alisher_dev" },
+                  "first_name": { "type": "string", "example": "Alisher" },
+                  "last_name": { "type": "string", "example": "Karimov" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Tasdiqlandi" },
+          "403": { "description": "Taqiqlangan (noto'g'ri bot token)" },
+          "404": { "description": "Auth sessiya topilmadi" }
+        }
+      }
+    },
+    "/api/mobile/application": {
+      "post": {
+        "tags": ["Mobile - Application"],
+        "summary": "Mutaxassis arizasini yuborish",
+        "description": "Mobile ilovadan mutaxassis arizasi qabul qilish. Multipart/form-data yoki JSON formatda qabul qilinadi. Admin Telegram orqali xabar oladi va qabul/rad qiladi.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["telegram_user_id", "profession", "full_name", "phone"],
+                "properties": {
+                  "telegram_user_id": { "type": "integer", "example": 123456789 },
+                  "username": { "type": "string", "example": "alisher_dev" },
+                  "profession": { "type": "string", "example": "Full Stack Dasturchi" },
+                  "full_name": { "type": "string", "example": "Alisher Karimov" },
+                  "phone": { "type": "string", "example": "+998901234567" },
+                  "city": { "type": "string", "example": "Toshkent" },
+                  "experience": { "type": "integer", "example": 5 },
+                  "price": { "type": "string", "example": "50$" },
+                  "free_time": { "type": "string", "example": "Dushanba-Juma, 9:00-18:00" },
+                  "description": { "type": "string", "example": "Tajribali dasturchi" },
+                  "photo": { "type": "string", "format": "binary" }
+                }
+              }
+            },
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["telegram_user_id", "profession", "full_name", "phone"],
+                "properties": {
+                  "telegram_user_id": { "type": "integer", "example": 123456789 },
+                  "username": { "type": "string", "example": "alisher_dev" },
+                  "profession": { "type": "string", "example": "Full Stack Dasturchi" },
+                  "full_name": { "type": "string", "example": "Alisher Karimov" },
+                  "phone": { "type": "string", "example": "+998901234567" },
+                  "city": { "type": "string", "example": "Toshkent" },
+                  "experience": { "type": "integer", "example": 5 },
+                  "price": { "type": "string", "example": "50$" },
+                  "free_time": { "type": "string", "example": "Dushanba-Juma, 9:00-18:00" },
+                  "description": { "type": "string", "example": "Tajribali dasturchi" },
+                  "photo_base64": { "type": "string", "description": "Base64 formatda rasm" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Ariza qabul qilindi",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Arizangiz qabul qilindi. Admin ko'rib chiqadi." },
+                    "application_id": { "type": "integer", "example": 1 }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Validatsiya xatosi (majburiy maydon yo'q)" },
+          "409": { "description": "Allaqachon pending ariza mavjud" },
+          "500": { "description": "Server xatosi" }
+        }
+      }
+    },
+    "/api/mobile/application/{app_id}": {
+      "get": {
+        "tags": ["Mobile - Application"],
+        "summary": "Ariza holatini tekshirish",
+        "parameters": [
+          {
+            "name": "app_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" },
+            "description": "Ariza ID si"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ariza ma'lumotlari",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "application_id": { "type": "integer", "example": 1 },
+                    "status": { "type": "string", "enum": ["pending", "approved", "rejected"], "example": "pending" },
+                    "created_at": { "type": "string", "example": "2026-03-28 10:30:00" }
+                  }
+                }
+              }
+            }
+          },
+          "404": { "description": "Ariza topilmadi" }
+        }
+      }
+    },
+    "/api/mobile/specialist/status": {
+      "get": {
+        "tags": ["Mobile - Application"],
+        "summary": "Mutaxassis holatini tekshirish (Telegram user ID bo'yicha)",
+        "description": "Telegram user ID orqali foydalanuvchi mutaxassis sifatida ro'yxatdan o'tganmi yoki arizasi bormi tekshiradi.",
+        "parameters": [
+          {
+            "name": "telegram_user_id",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer" },
+            "description": "Telegram user ID",
+            "example": 123456789
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Mutaxassis holati",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "registered": { "type": "boolean" },
+                    "specialist": {
+                      "type": "object",
+                      "nullable": true,
+                      "properties": {
+                        "id": { "type": "integer" },
+                        "profession": { "type": "string" },
+                        "full_name": { "type": "string" },
+                        "phone": { "type": "string" },
+                        "status": { "type": "string" },
+                        "city": { "type": "string" },
+                        "photo_url": { "type": "string" },
+                        "trial_expires_at": { "type": "string", "nullable": true },
+                        "paid_until": { "type": "string", "nullable": true },
+                        "created_at": { "type": "string" }
+                      }
+                    },
+                    "application": {
+                      "type": "object",
+                      "nullable": true,
+                      "properties": {
+                        "id": { "type": "integer" },
+                        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+                        "created_at": { "type": "string" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "telegram_user_id parametri majburiy" }
         }
       }
     }
