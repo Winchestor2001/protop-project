@@ -2168,7 +2168,7 @@ def mobile_auth_init():
         deep_link: Telegram deep link (foydalanuvchi uchun)
     """
     import secrets
-    token = secrets.token_hex(32)
+    token = secrets.token_hex(29)  # 58 belgi; "auth_" + 58 = 63 ≤ Telegram 64 belgi limiti
 
     conn = get_db()
     cur = conn.cursor()
