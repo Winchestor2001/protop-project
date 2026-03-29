@@ -171,7 +171,20 @@ def init_db():
                 )
             """)
 
-            # 8. ADVERTISEMENTS
+            # 8. DEVICE TOKENS (Push notifications)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS device_tokens (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    telegram_user_id BIGINT NOT NULL,
+                    token VARCHAR(500) NOT NULL UNIQUE,
+                    platform VARCHAR(10) NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    INDEX idx_device_tokens_user (telegram_user_id)
+                )
+            """)
+
+            # 9. ADVERTISEMENTS
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS advertisements (
                     id INT AUTO_INCREMENT PRIMARY KEY,

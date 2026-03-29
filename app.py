@@ -12,6 +12,11 @@ from email.mime.text import MIMEText
 from dotenv import load_dotenv
 from werkzeug.security import generate_password_hash, check_password_hash
 import base64
+import json
+
+# Firebase Admin SDK
+import firebase_admin
+from firebase_admin import credentials as fb_credentials, messaging
 
 # Load .env first
 load_dotenv()
@@ -56,6 +61,86 @@ def swagger_json():
     return send_from_directory(app.static_folder, 'swagger.json')
 
 import db
+
+# ---- Firebase Push Notifications ----
+_firebase_initialized = False
+FIREBASE_SERVICE_ACCOUNT_PATH = os.environ.get('FIREBASE_SERVICE_ACCOUNT_PATH', '')
+FIREBASE_SERVICE_ACCOUNT_JSON = os.environ.get('FIREBASE_SERVICE_ACCOUNT_JSON', '')
+
+if FIREBASE_SERVICE_ACCOUNT_PATH and os.path.exists(FIREBASE_SERVICE_ACCOUNT_PATH):
+    cred = fb_credentials.Certificate(FIREBASE_SERVICE_ACCOUNT_PATH)
+    firebase_admin.initialize_app(cred)
+    _firebase_initialized = True
+elif FIREBASE_SERVICE_ACCOUNT_JSON:
+    try:
+        cred = fb_credentials.Certificate(json.loads(FIREBASE_SERVICE_ACCOUNT_JSON))
+        firebase_admin.initialize_app(cred)
+        _firebase_initialized = True
+    except Exception as e:
+        print(f"Warning: Firebase init failed: {e}")
+else:
+    print("Warning: Firebase not configured. Push notifications disabled.")
+
+
+def send_push(token: str, title: str, body: str, data: dict = None):
+    """Bitta device ga push notification yuborish."""
+    if not _firebase_initialized:
+        return False
+    message = messaging.Message(
+        notification=messaging.Notification(title=title, body=body),
+        data={k: str(v) for k, v in (data or {}).items()},
+        token=token,
+    )
+    try:
+        messaging.send(message)
+        return True
+    except messaging.UnregisteredError:
+        # Token eskirgan — bazadan o'chirish
+        try:
+            conn = get_db()
+            cur = conn.cursor()
+            cur.execute("DELETE FROM device_tokens WHERE token = %s", (token,))
+            conn.commit()
+            conn.close()
+        except Exception:
+            pass
+        return False
+    except Exception as e:
+        print(f"Push send error: {e}")
+        return False
+
+
+def send_push_to_user(telegram_user_id: int, title: str, body: str, data: dict = None):
+    """Foydalanuvchining barcha qurilmalariga push yuborish."""
+    if not _firebase_initialized:
+        return 0
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT token FROM device_tokens WHERE telegram_user_id = %s", (telegram_user_id,))
+    rows = cur.fetchall()
+    conn.close()
+    sent = 0
+    for row in rows:
+        if send_push(row['token'], title, body, data):
+            sent += 1
+    return sent
+
+
+def send_push_broadcast(title: str, body: str, data: dict = None):
+    """Barcha ro'yxatdan o'tgan qurilmalarga push yuborish."""
+    if not _firebase_initialized:
+        return 0
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT DISTINCT token FROM device_tokens")
+    rows = cur.fetchall()
+    conn.close()
+    sent = 0
+    for row in rows:
+        if send_push(row['token'], title, body, data):
+            sent += 1
+    return sent
+
 
 DATABASE = 'protop_db' # MySQL DB name from env
 UPLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
@@ -2152,6 +2237,125 @@ def mobile_get_specialist_status():
         })
 
     return jsonify({'registered': False, 'application': None})
+
+
+# ---- Mobile Device Registration & Push Notifications ----
+
+@app.route('/api/mobile/device/register', methods=['POST'])
+def mobile_device_register():
+    """Mobile qurilma FCM tokenini ro'yxatdan o'tkazish."""
+    data = request.get_json() or {}
+    token = data.get('token', '').strip()
+    platform = data.get('platform', '').strip().lower()
+    telegram_user_id = data.get('telegram_user_id')
+
+    if not token or not platform or not telegram_user_id:
+        return jsonify({'error': 'token, platform va telegram_user_id majburiy'}), 400
+
+    if platform not in ('android', 'ios'):
+        return jsonify({'error': "platform faqat 'android' yoki 'ios' bo'lishi kerak"}), 400
+
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT id, telegram_user_id FROM device_tokens WHERE token = %s", (token,))
+        existing = cur.fetchone()
+        if existing:
+            if existing['telegram_user_id'] == telegram_user_id:
+                return jsonify({'success': True, 'message': 'Token allaqachon mavjud'}), 200
+            # Token boshqa userda — yangilash
+            cur.execute(
+                "UPDATE device_tokens SET telegram_user_id = %s, platform = %s WHERE token = %s",
+                (telegram_user_id, platform, token)
+            )
+        else:
+            cur.execute(
+                "INSERT INTO device_tokens (telegram_user_id, token, platform) VALUES (%s, %s, %s)",
+                (telegram_user_id, token, platform)
+            )
+        conn.commit()
+    finally:
+        conn.close()
+
+    return jsonify({'success': True})
+
+
+@app.route('/api/mobile/device/unregister', methods=['DELETE'])
+def mobile_device_unregister():
+    """Logout paytida FCM tokenni o'chirish."""
+    data = request.get_json() or {}
+    token = data.get('token', '').strip()
+
+    if not token:
+        return jsonify({'error': 'token majburiy'}), 400
+
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM device_tokens WHERE token = %s", (token,))
+    affected = cur.rowcount
+    conn.commit()
+    conn.close()
+
+    if affected == 0:
+        return jsonify({'error': 'Token topilmadi'}), 404
+
+    return jsonify({'success': True})
+
+
+@app.route('/api/admin/push-broadcast', methods=['POST'])
+def admin_push_broadcast():
+    """Admin paneldan barcha mobile qurilmalarga push notification yuborish."""
+    if not is_admin():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    if not _firebase_initialized:
+        return jsonify({'error': 'Firebase sozlanmagan. Push notification yuborib bo\'lmaydi.'}), 500
+
+    data = request.get_json() or {}
+    title = sanitize_input(data.get('title', ''), 200)
+    body = sanitize_input(data.get('body', ''), 1000)
+    push_data = data.get('data', {})
+
+    if not title or not body:
+        return jsonify({'error': 'title va body majburiy'}), 400
+
+    sent = send_push_broadcast(title, body, push_data)
+
+    return jsonify({
+        'ok': True,
+        'sent_count': sent
+    })
+
+
+@app.route('/api/admin/push-targeted', methods=['POST'])
+def admin_push_targeted():
+    """Tanlangan foydalanuvchilarga push notification yuborish."""
+    if not is_admin():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    if not _firebase_initialized:
+        return jsonify({'error': 'Firebase sozlanmagan'}), 500
+
+    data = request.get_json() or {}
+    title = sanitize_input(data.get('title', ''), 200)
+    body = sanitize_input(data.get('body', ''), 1000)
+    telegram_user_ids = data.get('telegram_user_ids', [])
+    push_data = data.get('data', {})
+
+    if not title or not body:
+        return jsonify({'error': 'title va body majburiy'}), 400
+
+    if not telegram_user_ids or not isinstance(telegram_user_ids, list):
+        return jsonify({'error': 'telegram_user_ids majburiy (list)'}), 400
+
+    total_sent = 0
+    for uid in telegram_user_ids:
+        total_sent += send_push_to_user(int(uid), title, body, push_data)
+
+    return jsonify({
+        'ok': True,
+        'sent_count': total_sent
+    })
 
 
 # ---- Mobile Telegram Auth ----

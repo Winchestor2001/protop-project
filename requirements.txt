@@ -8,3 +8,4 @@ python-dotenv==1.0.1
 requests==2.32.3
 pymysql
 flask-swagger-ui==5.21.0
+firebase-admin==6.4.0
