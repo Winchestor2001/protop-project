@@ -1253,6 +1253,311 @@
           "400": { "description": "telegram_user_id parametri majburiy" }
         }
       }
+    },
+    "/api/mobile/me": {
+      "get": {
+        "tags": ["Mobile - User"],
+        "summary": "Foydalanuvchining to'liq profilini olish",
+        "description": "Telegram User ID orqali foydalanuvchining barcha ma'lumotlarini qaytaradi: bot user info, specialist, ariza, obuna va referral statistikasi.",
+        "parameters": [
+          {
+            "name": "telegram_user_id",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer" },
+            "description": "Foydalanuvchining Telegram ID si",
+            "example": 123456789
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Foydalanuvchi profili",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "telegram_user_id": { "type": "integer", "example": 123456789 },
+                    "user": {
+                      "type": "object",
+                      "nullable": true,
+                      "properties": {
+                        "username": { "type": "string", "example": "john_doe" },
+                        "first_name": { "type": "string", "example": "John" },
+                        "last_name": { "type": "string", "example": "Doe" },
+                        "joined_at": { "type": "string", "example": "2024-01-15 10:30:00" }
+                      }
+                    },
+                    "specialist": {
+                      "type": "object",
+                      "nullable": true,
+                      "properties": {
+                        "id": { "type": "integer" },
+                        "profession": { "type": "string" },
+                        "full_name": { "type": "string" },
+                        "phone": { "type": "string" },
+                        "email": { "type": "string" },
+                        "experience": { "type": "integer" },
+                        "price": { "type": "string" },
+                        "city": { "type": "string" },
+                        "country": { "type": "string" },
+                        "description": { "type": "string" },
+                        "photo_url": { "type": "string" },
+                        "status": { "type": "string" },
+                        "trial_expires_at": { "type": "string" },
+                        "paid_until": { "type": "string" },
+                        "created_at": { "type": "string" }
+                      }
+                    },
+                    "application": {
+                      "type": "object",
+                      "nullable": true,
+                      "properties": {
+                        "id": { "type": "integer" },
+                        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+                        "profession": { "type": "string" },
+                        "full_name": { "type": "string" },
+                        "created_at": { "type": "string" }
+                      }
+                    },
+                    "subscription": {
+                      "type": "object",
+                      "nullable": true,
+                      "properties": {
+                        "started_at": { "type": "string" },
+                        "expires_at": { "type": "string" },
+                        "amount": { "type": "number" },
+                        "currency": { "type": "string" }
+                      }
+                    },
+                    "referrals": {
+                      "type": "object",
+                      "properties": {
+                        "total": { "type": "integer", "example": 5 },
+                        "activated": { "type": "integer", "example": 2 }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "telegram_user_id parametri majburiy yoki noto'g'ri" }
+        }
+      }
+    },
+    "/api/mobile/device/register": {
+      "post": {
+        "tags": ["Mobile - Device"],
+        "summary": "FCM device token ro'yxatdan o'tkazish",
+        "description": "Mobile ilova login bo'lgandan keyin FCM tokenni serverga yuboradi. Bitta foydalanuvchida bir nechta token bo'lishi mumkin (telefon + planshet).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["token", "platform", "telegram_user_id"],
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "description": "FCM device token",
+                    "example": "fMJk3xR9T2a..._long_fcm_token"
+                  },
+                  "platform": {
+                    "type": "string",
+                    "enum": ["android", "ios"],
+                    "description": "Qurilma platformasi",
+                    "example": "android"
+                  },
+                  "telegram_user_id": {
+                    "type": "integer",
+                    "description": "Foydalanuvchining Telegram ID si",
+                    "example": 123456789
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Muvaffaqiyatli ro'yxatdan o'tdi",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Majburiy maydon yo'q yoki platform noto'g'ri" }
+        }
+      }
+    },
+    "/api/mobile/device/unregister": {
+      "delete": {
+        "tags": ["Mobile - Device"],
+        "summary": "FCM device tokenni o'chirish",
+        "description": "Logout paytida device tokenni serverdan o'chirish.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["token"],
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "description": "O'chiriladigan FCM device token",
+                    "example": "fMJk3xR9T2a..._long_fcm_token"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token muvaffaqiyatli o'chirildi",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "token majburiy" },
+          "404": { "description": "Token topilmadi" }
+        }
+      }
+    },
+    "/api/admin/push-broadcast": {
+      "post": {
+        "tags": ["Admin - Push Notifications"],
+        "summary": "Barcha mobile qurilmalarga push yuborish",
+        "description": "Firebase orqali barcha ro'yxatdan o'tgan qurilmalarga push notification yuboradi.",
+        "security": [{ "BasicAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["title", "body"],
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "description": "Push sarlavhasi",
+                    "example": "Yangi mutaxassis!"
+                  },
+                  "body": {
+                    "type": "string",
+                    "description": "Push matni",
+                    "example": "Yangi Full Stack dasturchi qo'shildi"
+                  },
+                  "data": {
+                    "type": "object",
+                    "description": "Navigatsiya uchun qo'shimcha ma'lumot",
+                    "properties": {
+                      "type": { "type": "string", "enum": ["home", "specialist", "application"], "example": "specialist" },
+                      "id": { "type": "string", "example": "42" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Push muvaffaqiyatli yuborildi",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "example": true },
+                    "sent_count": { "type": "integer", "example": 15 }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "title va body majburiy" },
+          "401": { "description": "Unauthorized" },
+          "500": { "description": "Firebase sozlanmagan" }
+        }
+      }
+    },
+    "/api/admin/push-targeted": {
+      "post": {
+        "tags": ["Admin - Push Notifications"],
+        "summary": "Tanlangan foydalanuvchilarga push yuborish",
+        "description": "Telegram User ID lar orqali tanlangan foydalanuvchilarning qurilmalariga push notification yuboradi.",
+        "security": [{ "BasicAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["title", "body", "telegram_user_ids"],
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "example": "Arizangiz tasdiqlandi!"
+                  },
+                  "body": {
+                    "type": "string",
+                    "example": "Tabriklaymiz! Sizning arizangiz qabul qilindi."
+                  },
+                  "telegram_user_ids": {
+                    "type": "array",
+                    "items": { "type": "integer" },
+                    "description": "Foydalanuvchilarning Telegram ID lari",
+                    "example": [123456789, 987654321]
+                  },
+                  "data": {
+                    "type": "object",
+                    "properties": {
+                      "type": { "type": "string", "example": "application" },
+                      "id": { "type": "string", "example": "5" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Push muvaffaqiyatli yuborildi",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "example": true },
+                    "sent_count": { "type": "integer", "example": 3 }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Majburiy maydonlar yo'q" },
+          "401": { "description": "Unauthorized" },
+          "500": { "description": "Firebase sozlanmagan" }
+        }
+      }
     }
   }
 }

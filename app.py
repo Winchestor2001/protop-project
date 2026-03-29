@@ -2239,6 +2239,100 @@ def mobile_get_specialist_status():
     return jsonify({'registered': False, 'application': None})
 
 
+@app.route('/api/mobile/me', methods=['GET'])
+def mobile_get_me():
+    """Mobile foydalanuvchining to'liq profilini olish."""
+    telegram_user_id = request.args.get('telegram_user_id')
+    if not telegram_user_id:
+        return jsonify({'error': 'telegram_user_id parametri majburiy'}), 400
+    try:
+        telegram_user_id = int(telegram_user_id)
+    except (ValueError, TypeError):
+        return jsonify({'error': "telegram_user_id raqam bo'lishi kerak"}), 400
+
+    conn = get_db()
+    cur = conn.cursor()
+
+    # 1. Bot user info
+    cur.execute("SELECT * FROM bot_users WHERE user_id = %s", (telegram_user_id,))
+    bot_user = cur.fetchone()
+
+    # 2. Specialist info
+    cur.execute("SELECT * FROM specialists WHERE telegram_chat_id = %s", (telegram_user_id,))
+    specialist = cur.fetchone()
+
+    # 3. Oxirgi ariza
+    cur.execute(
+        "SELECT id, status, profession, full_name, created_at FROM applications WHERE user_id = %s ORDER BY created_at DESC LIMIT 1",
+        (telegram_user_id,)
+    )
+    application = cur.fetchone()
+
+    # 4. Obuna holati
+    subscription = None
+    if specialist:
+        cur.execute(
+            "SELECT * FROM subscriptions WHERE specialist_id = %s ORDER BY created_at DESC LIMIT 1",
+            (specialist['id'],)
+        )
+        subscription = cur.fetchone()
+
+    # 5. Referral stats
+    cur.execute("SELECT COUNT(*) as count FROM referrals WHERE referrer_id = %s", (telegram_user_id,))
+    referral_count = cur.fetchone()['count']
+
+    cur.execute("SELECT COUNT(*) as count FROM referrals WHERE referrer_id = %s AND status = 'activated'", (telegram_user_id,))
+    activated_referrals = cur.fetchone()['count']
+
+    conn.close()
+
+    result = {
+        'telegram_user_id': telegram_user_id,
+        'user': {
+            'username': bot_user['username'] if bot_user else None,
+            'first_name': bot_user['first_name'] if bot_user else None,
+            'last_name': bot_user['last_name'] if bot_user else None,
+            'joined_at': str(bot_user['joined_at']) if bot_user else None,
+        } if bot_user else None,
+        'specialist': {
+            'id': specialist['id'],
+            'profession': specialist['profession'],
+            'full_name': specialist['full_name'],
+            'phone': specialist['phone'],
+            'email': specialist['email'],
+            'experience': specialist['experience'],
+            'price': specialist['price'],
+            'city': specialist['city'],
+            'country': specialist['country'],
+            'description': specialist['description'],
+            'photo_url': specialist['photo_url'],
+            'status': specialist['status'],
+            'trial_expires_at': specialist['trial_expires_at'],
+            'paid_until': specialist['paid_until'],
+            'created_at': str(specialist['created_at']),
+        } if specialist else None,
+        'application': {
+            'id': application['id'],
+            'status': application['status'],
+            'profession': application['profession'],
+            'full_name': application['full_name'],
+            'created_at': str(application['created_at']),
+        } if application else None,
+        'subscription': {
+            'started_at': subscription['started_at'],
+            'expires_at': subscription['expires_at'],
+            'amount': subscription['amount'],
+            'currency': subscription['currency'],
+        } if subscription else None,
+        'referrals': {
+            'total': referral_count,
+            'activated': activated_referrals,
+        }
+    }
+
+    return jsonify(result)
+
+
 # ---- Mobile Device Registration & Push Notifications ----
 
 @app.route('/api/mobile/device/register', methods=['POST'])
