@@ -682,6 +682,8 @@
           <div id="tab-broadcast" class="tab-section">
             <section class="card" id="broadcast-holder"></section>
             <section class="card" id="targeted-broadcast-holder"></section>
+            <section class="card" id="push-broadcast-holder"></section>
+            <section class="card" id="push-targeted-holder"></section>
           </div>
 
         </main>
@@ -815,6 +817,8 @@
         loadAdvertisements();
         loadBroadcastSection();
         loadTargetedBroadcastSection();
+        loadPushBroadcastSection();
+        loadPushTargetedSection();
         loadReferralStats();
       }
 
@@ -1241,6 +1245,112 @@
         } catch (error) {
           console.error('Targeted broadcast error:', error);
           alert('❌ Xabar yuborishda tarmoq xatosi');
+        }
+      }
+
+      // ---- PUSH NOTIFICATION BO'LIMLARI ----
+
+      async function loadPushBroadcastSection() {
+        try {
+          const holderId = 'push-broadcast-holder';
+          document.getElementById(holderId).innerHTML = `
+            <h3>📲 Push Notification (Barcha mobile qurilmalarga)</h3>
+            <p class="muted">Barcha ro'yxatdan o'tgan mobile qurilmalarga push bildirishnoma yuborish</p>
+            <form id="pushBroadcastForm" style="margin-top:16px">
+              <input name="title" placeholder="Sarlavha (title)" required style="width:100%;padding:10px;margin-bottom:8px;border:1px solid #ddd;border-radius:8px">
+              <textarea name="body" rows="3" placeholder="Xabar matni (body)" required style="width:100%;padding:10px;margin-bottom:8px;border:1px solid #ddd;border-radius:8px"></textarea>
+              <select name="type" style="width:100%;padding:10px;margin-bottom:8px;border:1px solid #ddd;border-radius:8px">
+                <option value="">Navigatsiya turi (ixtiyoriy)</option>
+                <option value="home">Bosh sahifa</option>
+                <option value="specialist">Mutaxassis sahifasi</option>
+                <option value="application">Ariza sahifasi</option>
+              </select>
+              <input name="type_id" placeholder="ID (specialist yoki application uchun)" style="width:100%;padding:10px;margin-bottom:8px;border:1px solid #ddd;border-radius:8px">
+              <button type="submit" style="background:var(--primary);color:#fff;padding:10px 24px;border:none;border-radius:8px;cursor:pointer">📲 Push yuborish</button>
+            </form>`;
+          document.getElementById('pushBroadcastForm').addEventListener('submit', sendPushBroadcast);
+        } catch (e) { console.error(e); }
+      }
+
+      async function loadPushTargetedSection() {
+        try {
+          const holderId = 'push-targeted-holder';
+          document.getElementById(holderId).innerHTML = `
+            <h3>📲 Push Notification (Tanlangan foydalanuvchilarga)</h3>
+            <p class="muted">Telegram User ID lar orqali tanlangan foydalanuvchilarga push yuborish</p>
+            <form id="pushTargetedForm" style="margin-top:16px">
+              <input name="title" placeholder="Sarlavha (title)" required style="width:100%;padding:10px;margin-bottom:8px;border:1px solid #ddd;border-radius:8px">
+              <textarea name="body" rows="3" placeholder="Xabar matni (body)" required style="width:100%;padding:10px;margin-bottom:8px;border:1px solid #ddd;border-radius:8px"></textarea>
+              <textarea name="telegram_user_ids" rows="2" placeholder="Telegram User ID lar (vergul bilan: 123456, 789012)" required style="width:100%;padding:10px;margin-bottom:8px;border:1px solid #ddd;border-radius:8px"></textarea>
+              <button type="submit" style="background:var(--primary);color:#fff;padding:10px 24px;border:none;border-radius:8px;cursor:pointer">📲 Push yuborish</button>
+            </form>`;
+          document.getElementById('pushTargetedForm').addEventListener('submit', sendPushTargeted);
+        } catch (e) { console.error(e); }
+      }
+
+      async function sendPushBroadcast(e) {
+        e.preventDefault();
+        const form = document.getElementById('pushBroadcastForm');
+        const title = form.title.value.trim();
+        const body = form.body.value.trim();
+        const type = form.type.value;
+        const typeId = form.type_id.value.trim();
+
+        if (!title || !body) return alert('Sarlavha va xabar matni majburiy');
+
+        const pushData = {};
+        if (type) pushData.type = type;
+        if (typeId) pushData.id = typeId;
+
+        try {
+          const response = await fetch(`${API}/admin/push-broadcast`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ title, body, data: pushData })
+          });
+          const result = await response.json();
+          if (response.ok) {
+            form.reset();
+            alert(`✅ Push yuborildi! ${result.sent_count} qurilmaga yetkazildi.`);
+          } else {
+            alert('❌ Xato: ' + (result.error || 'Noma\'lum xato'));
+          }
+        } catch (error) {
+          console.error('Push broadcast error:', error);
+          alert('❌ Tarmoq xatosi');
+        }
+      }
+
+      async function sendPushTargeted(e) {
+        e.preventDefault();
+        const form = document.getElementById('pushTargetedForm');
+        const title = form.title.value.trim();
+        const body = form.body.value.trim();
+        const idsStr = form.telegram_user_ids.value.trim();
+
+        if (!title || !body || !idsStr) return alert('Barcha maydonlar majburiy');
+
+        const telegram_user_ids = idsStr.split(',').map(s => s.trim()).filter(Boolean).map(Number);
+        if (!telegram_user_ids.length) return alert('Kamida bitta Telegram User ID kiriting');
+
+        try {
+          const response = await fetch(`${API}/admin/push-targeted`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ title, body, telegram_user_ids })
+          });
+          const result = await response.json();
+          if (response.ok) {
+            form.reset();
+            alert(`✅ Push yuborildi! ${result.sent_count} qurilmaga yetkazildi.`);
+          } else {
+            alert('❌ Xato: ' + (result.error || 'Noma\'lum xato'));
+          }
+        } catch (error) {
+          console.error('Push targeted error:', error);
+          alert('❌ Tarmoq xatosi');
         }
       }
 
