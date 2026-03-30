@@ -2396,6 +2396,52 @@ def mobile_device_unregister():
     return jsonify({'success': True})
 
 
+@app.route('/api/admin/devices', methods=['GET'])
+def admin_devices():
+    """Admin panelda ro'yxatdan o'tgan mobile qurilmalar ro'yxati."""
+    if not is_admin():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT dt.id, dt.telegram_user_id, dt.token, dt.platform, dt.created_at, dt.updated_at,
+               bu.first_name, bu.username
+        FROM device_tokens dt
+        LEFT JOIN bot_users bu ON dt.telegram_user_id = bu.user_id
+        ORDER BY dt.created_at DESC
+    """)
+    devices = cur.fetchall()
+    conn.close()
+
+    for d in devices:
+        if d.get('created_at'):
+            d['created_at'] = str(d['created_at'])
+        if d.get('updated_at'):
+            d['updated_at'] = str(d['updated_at'])
+
+    return jsonify({'devices': devices, 'total': len(devices), 'firebase_initialized': _firebase_initialized})
+
+
+@app.route('/api/admin/devices/<int:device_id>', methods=['DELETE'])
+def admin_delete_device(device_id):
+    """Admin paneldan qurilma tokenini o'chirish."""
+    if not is_admin():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM device_tokens WHERE id = %s", (device_id,))
+    affected = cur.rowcount
+    conn.commit()
+    conn.close()
+
+    if affected == 0:
+        return jsonify({'error': 'Qurilma topilmadi'}), 404
+
+    return jsonify({'success': True})
+
+
 @app.route('/api/admin/push-broadcast', methods=['POST'])
 def admin_push_broadcast():
     """Admin paneldan barcha mobile qurilmalarga push notification yuborish."""

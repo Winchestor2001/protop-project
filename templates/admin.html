@@ -466,6 +466,8 @@
             Obunalar</button>
           <button class="nav-btn" onclick="switchTab('referrals')"><span class="material-icons">group_add</span>
             Referrallar</button>
+          <button class="nav-btn" onclick="switchTab('devices')"><span class="material-icons">smartphone</span>
+            Qurilmalar</button>
           <button class="nav-btn" onclick="switchTab('broadcast')"><span class="material-icons">send</span>
             Xabarnoma</button>
         </div>
@@ -679,6 +681,41 @@
           </div>
 
           <!-- BROADCAST TAB -->
+          <div id="tab-devices" class="tab-section">
+            <section class="card">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                <div>
+                  <h3 style="margin:0">📱 Ro'yxatdan o'tgan qurilmalar</h3>
+                  <p class="muted" style="margin:4px 0 0">Mobile ilovadan push notification uchun ro'yxatdan o'tgan qurilmalar</p>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px">
+                  <span id="deviceCount" style="font-size:1.5rem;font-weight:bold;color:var(--primary)">0</span>
+                  <span id="firebaseStatus" style="font-size:12px"></span>
+                  <button onclick="loadDevices()" style="padding:8px 16px;border-radius:8px;border:1px solid #ddd;cursor:pointer">🔄 Yangilash</button>
+                </div>
+              </div>
+              <div style="overflow-x:auto">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Foydalanuvchi</th>
+                      <th>Telegram ID</th>
+                      <th>Platforma</th>
+                      <th>Token</th>
+                      <th>Ro'yxatdan o'tgan</th>
+                      <th>Yangilangan</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody id="device-rows">
+                    <tr><td colspan="8" class="muted">Yuklanmoqda...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+
           <div id="tab-broadcast" class="tab-section">
             <section class="card" id="broadcast-holder"></section>
             <section class="card" id="targeted-broadcast-holder"></section>
@@ -820,6 +857,66 @@
         loadPushBroadcastSection();
         loadPushTargetedSection();
         loadReferralStats();
+        loadDevices();
+      }
+
+      async function loadDevices() {
+        const rowsEl = document.getElementById('device-rows');
+        const countEl = document.getElementById('deviceCount');
+        if (!rowsEl) return;
+        try {
+          const r = await fetch(`${API}/admin/devices`, { credentials: 'include' });
+          const d = await r.json();
+          if (countEl) countEl.textContent = d.total || 0;
+          const fbStatus = document.getElementById('firebaseStatus');
+          if (fbStatus) {
+            fbStatus.innerHTML = d.firebase_initialized
+              ? '<span style="color:var(--success);font-weight:bold">🟢 Firebase faol</span>'
+              : '<span style="color:var(--danger);font-weight:bold">🔴 Firebase sozlanmagan</span>';
+          }
+          if (!d.devices?.length) {
+            rowsEl.innerHTML = '<tr><td colspan="8" class="muted">Hech qanday qurilma ro\'yxatdan o\'tmagan</td></tr>';
+          } else {
+            rowsEl.innerHTML = d.devices.map(dev => {
+              const name = dev.first_name || dev.username || '-';
+              const username = dev.username ? `@${dev.username}` : '';
+              const shortToken = dev.token ? (dev.token.substring(0, 20) + '...') : '-';
+              const platform = dev.platform === 'android'
+                ? '<span style="color:#3ddc84;font-weight:bold">Android</span>'
+                : '<span style="color:#007aff;font-weight:bold">iOS</span>';
+              const created = dev.created_at ? new Date(dev.created_at).toLocaleString() : '-';
+              const updated = dev.updated_at ? new Date(dev.updated_at).toLocaleString() : '-';
+              return `<tr>
+                <td>${dev.id}</td>
+                <td><div>${name}</div><div class="muted" style="font-size:11px">${username}</div></td>
+                <td>${dev.telegram_user_id}</td>
+                <td>${platform}</td>
+                <td><span title="${dev.token}" style="font-size:11px;color:var(--muted);cursor:help">${shortToken}</span></td>
+                <td style="font-size:12px">${created}</td>
+                <td style="font-size:12px">${updated}</td>
+                <td><button class="danger" onclick="deleteDevice(${dev.id})" style="padding:4px 10px;font-size:11px;border-color:var(--danger)">O'chirish</button></td>
+              </tr>`;
+            }).join('');
+          }
+        } catch (e) {
+          console.error('Devices loading error:', e);
+          rowsEl.innerHTML = '<tr><td colspan="8" class="muted">Yuklashda xato</td></tr>';
+        }
+      }
+
+      async function deleteDevice(id) {
+        if (!confirm('Ushbu qurilma tokenini o\'chirmoqchimisiz?')) return;
+        try {
+          const r = await fetch(`${API}/admin/devices/${id}`, { method: 'DELETE', credentials: 'include' });
+          const d = await r.json();
+          if (r.ok) {
+            loadDevices();
+          } else {
+            alert('Xato: ' + (d.error || 'Noma\'lum xato'));
+          }
+        } catch (e) {
+          alert('Tarmoq xatosi');
+        }
       }
 
       async function loadReferralStats() {
