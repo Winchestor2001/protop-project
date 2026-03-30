@@ -82,8 +82,67 @@ else:
     print("Warning: Firebase not configured. Push notifications disabled.")
 
 
+def _is_expo_token(token: str) -> bool:
+    """Expo Push Token ekanligini tekshirish."""
+    return token.startswith('ExponentPushToken[') or token.startswith('ExpoPushToken[')
+
+
+def _send_expo_push(tokens: list, title: str, body: str, data: dict = None):
+    """Expo Push API orqali bir nechta tokenlarga yuborish. Muvaffaqiyatli va xato tokenlar qaytadi."""
+    EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send'
+    messages = []
+    for token in tokens:
+        msg = {
+            'to': token,
+            'title': title,
+            'body': body,
+            'sound': 'default',
+        }
+        if data:
+            msg['data'] = data
+        messages.append(msg)
+
+    success_count = 0
+    failed_tokens = []
+    try:
+        resp = requests.post(
+            EXPO_PUSH_URL,
+            json=messages,
+            headers={'Content-Type': 'application/json'},
+            timeout=30,
+        )
+        result = resp.json()
+        for i, ticket in enumerate(result.get('data', [])):
+            if ticket.get('status') == 'ok':
+                success_count += 1
+            else:
+                detail = ticket.get('details', {})
+                if detail.get('error') == 'DeviceNotRegistered':
+                    failed_tokens.append(tokens[i])
+                print(f"Expo push error for {tokens[i]}: {ticket}")
+    except Exception as e:
+        print(f"Expo push request error: {e}")
+
+    # Eskirgan tokenlarni bazadan o'chirish
+    if failed_tokens:
+        try:
+            conn = get_db()
+            cur = conn.cursor()
+            placeholders = ','.join(['%s'] * len(failed_tokens))
+            cur.execute(f"DELETE FROM device_tokens WHERE token IN ({placeholders})", failed_tokens)
+            conn.commit()
+            conn.close()
+        except Exception:
+            pass
+
+    return success_count
+
+
 def send_push(token: str, title: str, body: str, data: dict = None):
     """Bitta device ga push notification yuborish."""
+    if _is_expo_token(token):
+        return _send_expo_push([token], title, body, data) > 0
+
     if not _firebase_initialized:
         return False
     message = messaging.Message(
@@ -95,7 +154,6 @@ def send_push(token: str, title: str, body: str, data: dict = None):
         messaging.send(message)
         return True
     except messaging.UnregisteredError:
-        # Token eskirgan — bazadan o'chirish
         try:
             conn = get_db()
             cur = conn.cursor()
@@ -112,32 +170,46 @@ def send_push(token: str, title: str, body: str, data: dict = None):
 
 def send_push_to_user(telegram_user_id: int, title: str, body: str, data: dict = None):
     """Foydalanuvchining barcha qurilmalariga push yuborish."""
-    if not _firebase_initialized:
-        return 0
     conn = get_db()
     cur = conn.cursor()
     cur.execute("SELECT token FROM device_tokens WHERE telegram_user_id = %s", (telegram_user_id,))
     rows = cur.fetchall()
     conn.close()
+
+    if not rows:
+        return 0
+
+    expo_tokens = [r['token'] for r in rows if _is_expo_token(r['token'])]
+    fcm_tokens = [r['token'] for r in rows if not _is_expo_token(r['token'])]
+
     sent = 0
-    for row in rows:
-        if send_push(row['token'], title, body, data):
+    if expo_tokens:
+        sent += _send_expo_push(expo_tokens, title, body, data)
+    for token in fcm_tokens:
+        if _firebase_initialized and send_push(token, title, body, data):
             sent += 1
     return sent
 
 
 def send_push_broadcast(title: str, body: str, data: dict = None):
     """Barcha ro'yxatdan o'tgan qurilmalarga push yuborish."""
-    if not _firebase_initialized:
-        return 0
     conn = get_db()
     cur = conn.cursor()
     cur.execute("SELECT DISTINCT token FROM device_tokens")
     rows = cur.fetchall()
     conn.close()
+
+    if not rows:
+        return 0
+
+    expo_tokens = [r['token'] for r in rows if _is_expo_token(r['token'])]
+    fcm_tokens = [r['token'] for r in rows if not _is_expo_token(r['token'])]
+
     sent = 0
-    for row in rows:
-        if send_push(row['token'], title, body, data):
+    if expo_tokens:
+        sent += _send_expo_push(expo_tokens, title, body, data)
+    for token in fcm_tokens:
+        if _firebase_initialized and send_push(token, title, body, data):
             sent += 1
     return sent
 
@@ -2448,9 +2520,6 @@ def admin_push_broadcast():
     if not is_admin():
         return jsonify({'error': 'Unauthorized'}), 401
 
-    if not _firebase_initialized:
-        return jsonify({'error': 'Firebase sozlanmagan. Push notification yuborib bo\'lmaydi.'}), 500
-
     data = request.get_json() or {}
     title = sanitize_input(data.get('title', ''), 200)
     body = sanitize_input(data.get('body', ''), 1000)
@@ -2472,9 +2541,6 @@ def admin_push_targeted():
     """Tanlangan foydalanuvchilarga push notification yuborish."""
     if not is_admin():
         return jsonify({'error': 'Unauthorized'}), 401
-
-    if not _firebase_initialized:
-        return jsonify({'error': 'Firebase sozlanmagan'}), 500
 
     data = request.get_json() or {}
     title = sanitize_input(data.get('title', ''), 200)
