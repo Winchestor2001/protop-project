@@ -569,6 +569,10 @@ def robots_txt():
 def sitemap_xml():
     return send_from_directory(app.static_folder, 'sitemap.xml', mimetype='application/xml')
 
+@app.route('/privacy')
+def privacy_page():
+    return render_template('privacy.html')
+
 @app.route('/')
 def home():
     return render_template('index.html')
