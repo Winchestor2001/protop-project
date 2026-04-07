@@ -1944,9 +1944,43 @@ body.dark .top-label {
     margin-bottom: 0.25rem;
 }
 
+.privacy-content h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-main);
+    margin-top: 1.25rem;
+    margin-bottom: 0.5rem;
+}
+
 .privacy-content a {
     color: var(--primary-light);
     text-decoration: underline;
+}
+
+.privacy-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1.5rem;
+}
+
+.privacy-table th,
+.privacy-table td {
+    text-align: left;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border-light);
+    color: var(--text-secondary);
+}
+
+.privacy-table th {
+    background: var(--bg-body);
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.privacy-divider {
+    border: none;
+    border-top: 2px solid var(--border-light);
+    margin: 3rem 0;
 }
 
 @media (max-width: 768px) {
