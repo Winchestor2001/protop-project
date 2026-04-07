@@ -168,8 +168,25 @@ def send_push(token: str, title: str, body: str, data: dict = None):
         return False
 
 
+def _save_notification(telegram_user_id: int, title: str, body: str, data: dict = None):
+    """Notificationni bazaga saqlash."""
+    try:
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO notifications (telegram_user_id, title, body, data) VALUES (%s, %s, %s, %s)",
+            (telegram_user_id, title, body, json.dumps(data) if data else None)
+        )
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Notification save error: {e}")
+
+
 def send_push_to_user(telegram_user_id: int, title: str, body: str, data: dict = None):
     """Foydalanuvchining barcha qurilmalariga push yuborish."""
+    _save_notification(telegram_user_id, title, body, data)
+
     conn = get_db()
     cur = conn.cursor()
     cur.execute("SELECT token FROM device_tokens WHERE telegram_user_id = %s", (telegram_user_id,))
@@ -195,15 +212,26 @@ def send_push_broadcast(title: str, body: str, data: dict = None):
     """Barcha ro'yxatdan o'tgan qurilmalarga push yuborish."""
     conn = get_db()
     cur = conn.cursor()
-    cur.execute("SELECT DISTINCT token FROM device_tokens")
+    cur.execute("SELECT DISTINCT token, telegram_user_id FROM device_tokens")
     rows = cur.fetchall()
+
+    # Har bir unique userga notification saqlash
+    saved_users = set()
+    for r in rows:
+        uid = r['telegram_user_id']
+        if uid not in saved_users:
+            saved_users.add(uid)
     conn.close()
+
+    for uid in saved_users:
+        _save_notification(uid, title, body, data)
 
     if not rows:
         return 0
 
-    expo_tokens = [r['token'] for r in rows if _is_expo_token(r['token'])]
-    fcm_tokens = [r['token'] for r in rows if not _is_expo_token(r['token'])]
+    all_tokens = [r['token'] for r in rows]
+    expo_tokens = [t for t in all_tokens if _is_expo_token(t)]
+    fcm_tokens = [t for t in all_tokens if not _is_expo_token(t)]
 
     sent = 0
     if expo_tokens:
@@ -2470,6 +2498,138 @@ def mobile_device_unregister():
         return jsonify({'error': 'Token topilmadi'}), 404
 
     return jsonify({'success': True})
+
+
+# ---- Mobile Notifications API ----
+
+@app.route('/api/mobile/notifications', methods=['GET'])
+def mobile_notifications():
+    """Foydalanuvchining barcha notificationlarini olish."""
+    telegram_user_id = request.args.get('telegram_user_id')
+    if not telegram_user_id:
+        return jsonify({'error': 'telegram_user_id majburiy'}), 400
+
+    page = int(request.args.get('page', 1))
+    per_page = int(request.args.get('per_page', 20))
+    offset = (page - 1) * per_page
+
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute(
+        "SELECT COUNT(*) as total FROM notifications WHERE telegram_user_id = %s",
+        (telegram_user_id,)
+    )
+    total = cur.fetchone()['total']
+
+    cur.execute(
+        "SELECT COUNT(*) as unread FROM notifications WHERE telegram_user_id = %s AND is_read = 0",
+        (telegram_user_id,)
+    )
+    unread = cur.fetchone()['unread']
+
+    cur.execute(
+        """SELECT id, title, body, data, is_read, created_at
+           FROM notifications
+           WHERE telegram_user_id = %s
+           ORDER BY created_at DESC
+           LIMIT %s OFFSET %s""",
+        (telegram_user_id, per_page, offset)
+    )
+    notifications = cur.fetchall()
+    conn.close()
+
+    for n in notifications:
+        if n.get('created_at'):
+            n['created_at'] = str(n['created_at'])
+        if n.get('data') and isinstance(n['data'], str):
+            try:
+                n['data'] = json.loads(n['data'])
+            except (json.JSONDecodeError, TypeError):
+                pass
+        n['is_read'] = bool(n['is_read'])
+
+    return jsonify({
+        'notifications': notifications,
+        'total': total,
+        'unread': unread,
+        'page': page,
+        'per_page': per_page
+    })
+
+
+@app.route('/api/mobile/notifications/<int:notification_id>/read', methods=['PATCH'])
+def mobile_notification_read(notification_id):
+    """Bitta notificationni o'qildi deb belgilash."""
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE notifications SET is_read = 1 WHERE id = %s",
+        (notification_id,)
+    )
+    affected = cur.rowcount
+    conn.commit()
+    conn.close()
+
+    if affected == 0:
+        return jsonify({'error': 'Notification topilmadi'}), 404
+
+    return jsonify({'success': True})
+
+
+@app.route('/api/mobile/notifications/read-all', methods=['PATCH'])
+def mobile_notifications_read_all():
+    """Foydalanuvchining barcha notificationlarini o'qildi deb belgilash."""
+    data = request.get_json() or {}
+    telegram_user_id = data.get('telegram_user_id')
+    if not telegram_user_id:
+        return jsonify({'error': 'telegram_user_id majburiy'}), 400
+
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE notifications SET is_read = 1 WHERE telegram_user_id = %s AND is_read = 0",
+        (telegram_user_id,)
+    )
+    updated = cur.rowcount
+    conn.commit()
+    conn.close()
+
+    return jsonify({'success': True, 'updated': updated})
+
+
+@app.route('/api/mobile/notifications/<int:notification_id>', methods=['DELETE'])
+def mobile_notification_delete(notification_id):
+    """Bitta notificationni o'chirish."""
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM notifications WHERE id = %s", (notification_id,))
+    affected = cur.rowcount
+    conn.commit()
+    conn.close()
+
+    if affected == 0:
+        return jsonify({'error': 'Notification topilmadi'}), 404
+
+    return jsonify({'success': True})
+
+
+@app.route('/api/mobile/notifications/clear', methods=['DELETE'])
+def mobile_notifications_clear():
+    """Foydalanuvchining barcha notificationlarini o'chirish."""
+    data = request.get_json() or {}
+    telegram_user_id = data.get('telegram_user_id')
+    if not telegram_user_id:
+        return jsonify({'error': 'telegram_user_id majburiy'}), 400
+
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM notifications WHERE telegram_user_id = %s", (telegram_user_id,))
+    deleted = cur.rowcount
+    conn.commit()
+    conn.close()
+
+    return jsonify({'success': True, 'deleted': deleted})
 
 
 @app.route('/api/admin/devices', methods=['GET'])

@@ -118,7 +118,8 @@
     { "name": "Admin - Other", "description": "Admin: Boshqa funksiyalar" },
     { "name": "Bot", "description": "Telegram bot ichki API" },
     { "name": "Mobile - Auth", "description": "Mobile ilova uchun Telegram orqali autentifikatsiya" },
-    { "name": "Mobile - Application", "description": "Mobile ilova orqali mutaxassis arizasi" }
+    { "name": "Mobile - Application", "description": "Mobile ilova orqali mutaxassis arizasi" },
+    { "name": "Mobile - Notifications", "description": "Mobile ilova uchun bildirishnomalar" }
   ],
   "paths": {
     "/api/specialists": {
@@ -1556,6 +1557,209 @@
           "400": { "description": "Majburiy maydonlar yo'q" },
           "401": { "description": "Unauthorized" },
           "500": { "description": "Firebase sozlanmagan" }
+        }
+      }
+    },
+    "/api/mobile/notifications": {
+      "get": {
+        "tags": ["Mobile - Notifications"],
+        "summary": "Foydalanuvchi bildirishnomalarini olish",
+        "description": "Foydalanuvchining barcha bildirishnomalarini sahifalash bilan qaytaradi. O'qilmagan soni ham qaytadi.",
+        "parameters": [
+          {
+            "name": "telegram_user_id",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer" },
+            "description": "Telegram foydalanuvchi ID"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 1 },
+            "description": "Sahifa raqami"
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 20 },
+            "description": "Har bir sahifadagi elementlar soni"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bildirishnomalar ro'yxati",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "notifications": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "integer", "example": 1 },
+                          "title": { "type": "string", "example": "Yangi buyurtma" },
+                          "body": { "type": "string", "example": "Sizga yangi buyurtma keldi" },
+                          "data": { "type": "object", "nullable": true },
+                          "is_read": { "type": "boolean", "example": false },
+                          "created_at": { "type": "string", "example": "2026-04-07 12:00:00" }
+                        }
+                      }
+                    },
+                    "total": { "type": "integer", "example": 15 },
+                    "unread": { "type": "integer", "example": 3 },
+                    "page": { "type": "integer", "example": 1 },
+                    "per_page": { "type": "integer", "example": 20 }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "telegram_user_id majburiy" }
+        }
+      }
+    },
+    "/api/mobile/notifications/{notification_id}/read": {
+      "patch": {
+        "tags": ["Mobile - Notifications"],
+        "summary": "Bildirishnomani o'qildi deb belgilash",
+        "description": "Bitta bildirishnomani o'qildi holatiga o'tkazadi.",
+        "parameters": [
+          {
+            "name": "notification_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" },
+            "description": "Bildirishnoma ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Muvaffaqiyatli belgilandi",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true }
+                  }
+                }
+              }
+            }
+          },
+          "404": { "description": "Notification topilmadi" }
+        }
+      }
+    },
+    "/api/mobile/notifications/read-all": {
+      "patch": {
+        "tags": ["Mobile - Notifications"],
+        "summary": "Barcha bildirishnomalarni o'qildi deb belgilash",
+        "description": "Foydalanuvchining barcha o'qilmagan bildirishnomalarini o'qildi holatiga o'tkazadi.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["telegram_user_id"],
+                "properties": {
+                  "telegram_user_id": { "type": "integer", "example": 123456789 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Muvaffaqiyatli belgilandi",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "updated": { "type": "integer", "example": 5 }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "telegram_user_id majburiy" }
+        }
+      }
+    },
+    "/api/mobile/notifications/{notification_id}": {
+      "delete": {
+        "tags": ["Mobile - Notifications"],
+        "summary": "Bildirishnomani o'chirish",
+        "description": "Bitta bildirishnomani o'chiradi.",
+        "parameters": [
+          {
+            "name": "notification_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" },
+            "description": "Bildirishnoma ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Muvaffaqiyatli o'chirildi",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true }
+                  }
+                }
+              }
+            }
+          },
+          "404": { "description": "Notification topilmadi" }
+        }
+      }
+    },
+    "/api/mobile/notifications/clear": {
+      "delete": {
+        "tags": ["Mobile - Notifications"],
+        "summary": "Barcha bildirishnomalarni o'chirish",
+        "description": "Foydalanuvchining barcha bildirishnomalarini o'chiradi.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["telegram_user_id"],
+                "properties": {
+                  "telegram_user_id": { "type": "integer", "example": 123456789 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Muvaffaqiyatli o'chirildi",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "deleted": { "type": "integer", "example": 10 }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "telegram_user_id majburiy" }
         }
       }
     }

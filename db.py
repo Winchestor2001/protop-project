@@ -184,7 +184,22 @@ def init_db():
                 )
             """)
 
-            # 9. ADVERTISEMENTS
+            # 9. NOTIFICATIONS
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS notifications (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    telegram_user_id BIGINT NOT NULL,
+                    title VARCHAR(200) NOT NULL,
+                    body TEXT NOT NULL,
+                    data JSON,
+                    is_read TINYINT(1) DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    INDEX idx_notifications_user (telegram_user_id),
+                    INDEX idx_notifications_user_read (telegram_user_id, is_read)
+                )
+            """)
+
+            # 10. ADVERTISEMENTS
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS advertisements (
                     id INT AUTO_INCREMENT PRIMARY KEY,
