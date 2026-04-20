@@ -2088,7 +2088,7 @@ def admin_delete_profession():
 # ---- Mobile API endpoints ----
 
 TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN', '')
-ADMIN_TELEGRAM_ID = os.environ.get('ADMIN_TELEGRAM_ID', '')
+ADMIN_TELEGRAM_IDS = [x.strip() for x in os.environ.get('ADMIN_TELEGRAM_ID', '').split(',') if x.strip()]
 BOT_USERNAME = os.environ.get('BOT_USERNAME', '')  # Bot username (without @)
 
 
@@ -2239,8 +2239,8 @@ def mobile_submit_application():
     finally:
         conn.close()
 
-    # Adminga Telegram orqali xabar yuborish
-    if ADMIN_TELEGRAM_ID:
+    # Adminlarga Telegram orqali xabar yuborish
+    if ADMIN_TELEGRAM_IDS:
         caption = (
             f"<b>Yangi ariza #{app_id}</b> (Mobile)\n\n"
             f"<b>Kasb:</b> {profession}\n"
@@ -2258,10 +2258,11 @@ def mobile_submit_application():
                 {'text': '\u274c Inkor qilish', 'callback_data': f'reject:{app_id}'}
             ]]
         }
-        if photo_path and os.path.exists(photo_path):
-            send_telegram_photo(ADMIN_TELEGRAM_ID, photo_path, caption, inline_keyboard)
-        else:
-            send_telegram_message(ADMIN_TELEGRAM_ID, caption, inline_keyboard)
+        for admin_id in ADMIN_TELEGRAM_IDS:
+            if photo_path and os.path.exists(photo_path):
+                send_telegram_photo(admin_id, photo_path, caption, inline_keyboard)
+            else:
+                send_telegram_message(admin_id, caption, inline_keyboard)
 
     return jsonify({
         'success': True,

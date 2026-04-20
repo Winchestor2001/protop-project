@@ -16,7 +16,8 @@ load_dotenv()
 
 # ---- Config ----
 BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')  # REQUIRED
-ADMIN_ID = int(os.environ.get('ADMIN_TELEGRAM_ID', '0'))  # REQUIRED (numeric)
+ADMIN_IDS = [int(x.strip()) for x in os.environ.get('ADMIN_TELEGRAM_ID', '').split(',') if x.strip().isdigit()]
+ADMIN_ID = ADMIN_IDS[0] if ADMIN_IDS else 0  # backward compat
 API_BASE = os.environ.get('API_BASE', 'http://localhost:5000/api')
 SITE_URL = os.environ.get('SITE_URL', 'http://localhost:5000')
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -585,8 +586,8 @@ async def receive_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     finally:
         conn.close()
 
-    # Notify admin
-    if ADMIN_ID:
+    # Notify admins
+    if ADMIN_IDS:
         kb = InlineKeyboardMarkup([
             [
                 InlineKeyboardButton("✅ Tasdiqlash", callback_data=f"approve:{app_id}"),
@@ -603,12 +604,16 @@ async def receive_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"Vaqt: {data.get('free_time') or '-'}\n\n"
             f"{data.get('description') or ''}"
         )
-        try:
-            with open(local_path, 'rb') as f:
-                await context.bot.send_photo(chat_id=ADMIN_ID, photo=f, caption=caption, reply_markup=kb)
-        except Exception as e:
-            log.exception("Failed to send photo to admin: %s", e)
-            await context.bot.send_message(chat_id=ADMIN_ID, text=caption, reply_markup=kb)
+        for admin_id in ADMIN_IDS:
+            try:
+                with open(local_path, 'rb') as f:
+                    await context.bot.send_photo(chat_id=admin_id, photo=f, caption=caption, reply_markup=kb)
+            except Exception as e:
+                log.exception("Failed to send photo to admin %s: %s", admin_id, e)
+                try:
+                    await context.bot.send_message(chat_id=admin_id, text=caption, reply_markup=kb)
+                except Exception:
+                    pass
 
     await update.message.reply_text(
         "✅ Rahmat! Arizangiz yuborildi. Admin tasdiqlaganidan so'ng sizga xabar beramiz.\n"
@@ -641,7 +646,7 @@ async def on_decision(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    if not ADMIN_ID or update.effective_user.id != ADMIN_ID:
+    if not ADMIN_IDS or update.effective_user.id not in ADMIN_IDS:
         await query.edit_message_reply_markup(reply_markup=None)
         await query.message.reply_text("Sizda ruxsat yo'q")
         return
@@ -875,7 +880,7 @@ async def on_top_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Siz TOP-{pos} o'rnini tanladingiz. Admin joy bandligini tekshiradi va sizga narx bilan javob beradi."
     )
 
-    if ADMIN_ID:
+    if ADMIN_IDS:
         username = update.effective_user.username or '-'
         text_admin = (
             "Yangi TOP so'rovi\n\n"
@@ -887,17 +892,18 @@ async def on_top_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
         kb = InlineKeyboardMarkup([
             [InlineKeyboardButton(f"TOP-{pos} narxini yuborish", callback_data=f"topprice:{pos}:{user_id}")]
         ])
-        try:
-            await context.bot.send_message(chat_id=ADMIN_ID, text=text_admin, reply_markup=kb)
-        except Exception:
-            pass
+        for admin_id in ADMIN_IDS:
+            try:
+                await context.bot.send_message(chat_id=admin_id, text=text_admin, reply_markup=kb)
+            except Exception:
+                pass
 
 
 async def on_top_price_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Админ нажал кнопку 'topprice:pos:user_id' — запрашиваем у него цену для TOP."""
     q = update.callback_query
     await q.answer()
-    if not ADMIN_ID or update.effective_user.id != ADMIN_ID:
+    if not ADMIN_IDS or update.effective_user.id not in ADMIN_IDS:
         await q.message.reply_text("Sizda ruxsat yo'q")
         return
     parts = q.data.split(':')
@@ -975,8 +981,12 @@ async def receive_payment_screenshot(update: Update, context: ContextTypes.DEFAU
         ]
     ])
     
-    await context.bot.send_photo(chat_id=ADMIN_ID, photo=photo, caption=caption, reply_markup=kb, parse_mode='HTML')
-    
+    for admin_id in ADMIN_IDS:
+        try:
+            await context.bot.send_photo(chat_id=admin_id, photo=photo, caption=caption, reply_markup=kb, parse_mode='HTML')
+        except Exception:
+            pass
+
     await update.message.reply_text(
         "✅ Chek qabul qilindi! Admin tasdiqlashini kuting.\n"
         "✅ Чек принят! Ожидайте подтверждения администратора."
@@ -1009,8 +1019,12 @@ async def receive_top_payment_screenshot(update: Update, context: ContextTypes.D
         ]
     ])
 
-    await context.bot.send_photo(chat_id=ADMIN_ID, photo=photo, caption=caption, reply_markup=kb, parse_mode='HTML')
-    
+    for admin_id in ADMIN_IDS:
+        try:
+            await context.bot.send_photo(chat_id=admin_id, photo=photo, caption=caption, reply_markup=kb, parse_mode='HTML')
+        except Exception:
+            pass
+
     await update.message.reply_text(
         f"✅ TOP-{position} uchun chek qabul qilindi! Admin tasdiqlashini kuting.\n"
     )
@@ -1022,7 +1036,7 @@ async def on_payment_decision(update: Update, context: ContextTypes.DEFAULT_TYPE
     """Админ подтверждает или отклоняет оплату (обычная подписка: payok/payno)."""
     q = update.callback_query
     await q.answer()
-    if not ADMIN_ID or update.effective_user.id != ADMIN_ID:
+    if not ADMIN_IDS or update.effective_user.id not in ADMIN_IDS:
         await q.message.reply_text("Sizda ruxsat yo'q")
         return
 
@@ -1111,7 +1125,7 @@ async def on_top_payment_decision(update: Update, context: ContextTypes.DEFAULT_
     """Админ подтверждает или отклоняет оплату за TOP (toppayok/toppayno)."""
     q = update.callback_query
     await q.answer()
-    if not ADMIN_ID or update.effective_user.id != ADMIN_ID:
+    if not ADMIN_IDS or update.effective_user.id not in ADMIN_IDS:
         await q.message.reply_text("Sizda ruxsat yo'q")
         return
 
@@ -1321,7 +1335,7 @@ def main():
     # Admin reason / TOP price collector
     async def admin_reason_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         admin_id = update.effective_user.id
-        if admin_id != ADMIN_ID:
+        if admin_id not in ADMIN_IDS:
             return
         app_id = PENDING_REASONS.get(admin_id)
         top_ctx = PENDING_TOP_PRICES.get(admin_id)
