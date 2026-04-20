@@ -38,8 +38,8 @@ init_db()
 # ---- Conversation states ----
 PROFESSION, FULL_NAME, PHONE, REGION, CITY, EXPERIENCE, FREE_TIME, DESCRIPTION, PHOTO = range(9)
 
-# Pending reject reasons: admin_id -> app_id
-PENDING_REASONS: Dict[int, int] = {}
+# Pending reject reasons: admin_id -> {app_id, chat_id, message_id}
+PENDING_REASONS: Dict[int, dict] = {}
 # Pending payment rejection reasons: admin_id -> {specialist_id, user_id}
 PENDING_PAYMENT_REJECTION: Dict[int, dict] = {}
 # Pending TOP payment rejection reasons: admin_id -> {position, user_id}
@@ -810,8 +810,13 @@ async def on_decision(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception as e:
             log.exception(f"Error in approval notification: {e}")
     elif action == 'reject':
-        # Ask admin for reason
-        PENDING_REASONS[update.effective_user.id] = app_id
+        # Ask admin for reason, store original message info for later editing
+        PENDING_REASONS[update.effective_user.id] = {
+            'app_id': app_id,
+            'chat_id': query.message.chat_id,
+            'message_id': query.message.message_id,
+            'caption': query.message.caption or '',
+        }
         await query.message.reply_text("Rad etish sababi? Ushbu xabarga javob sifatida yozing.")
     conn.close()
 
@@ -1348,21 +1353,37 @@ def main():
 
         # 1) Причина отклонения заявки
         if app_id:
-            PENDING_REASONS.pop(admin_id, None)
+            reject_ctx = PENDING_REASONS.pop(admin_id, None)
+            real_app_id = reject_ctx['app_id'] if reject_ctx else None
+            if not real_app_id:
+                return
             conn = db.get_connection()
-            # conn.row_factory = sqlite3.Row
             cur = conn.cursor()
-            cur.execute("SELECT * FROM applications WHERE id=%s", (app_id,))
+            cur.execute("SELECT * FROM applications WHERE id=%s", (real_app_id,))
             row = cur.fetchone()
             if row:
                 # Inkor qilingan arizani DB dan o'chirish
-                cur.execute("DELETE FROM applications WHERE id=%s", (app_id,))
+                cur.execute("DELETE FROM applications WHERE id=%s", (real_app_id,))
                 conn.commit()
                 try:
                     await context.bot.send_message(chat_id=row['user_id'], text=f"Kechirasiz, arizangiz rad etildi. Sabab: {text}")
                     REJECTED_STICKER = os.environ.get('STICKER_REJECTED','')
                     if REJECTED_STICKER:
                         await context.bot.send_sticker(chat_id=row['user_id'], sticker=REJECTED_STICKER)
+                except Exception:
+                    pass
+                # Asl postdan inline tugmalarni olib tashlash va "❌ Rad etildi" qo'shish
+                try:
+                    orig_chat_id = reject_ctx.get('chat_id')
+                    orig_message_id = reject_ctx.get('message_id')
+                    orig_caption = reject_ctx.get('caption', '')
+                    if orig_chat_id and orig_message_id:
+                        await context.bot.edit_message_caption(
+                            chat_id=orig_chat_id,
+                            message_id=orig_message_id,
+                            caption=orig_caption + "\n\n❌ Rad etildi",
+                            reply_markup=None
+                        )
                 except Exception:
                     pass
                 await update.message.reply_text("Rad etish sababi yuborildi va ariza o'chirildi ✔️")
