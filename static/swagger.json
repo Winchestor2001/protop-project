@@ -1762,6 +1762,85 @@
           "400": { "description": "telegram_user_id majburiy" }
         }
       }
+    },
+    "/api/mobile/demo-login": {
+      "post": {
+        "tags": ["Mobile - Account"],
+        "summary": "App Store reviewer uchun demo login",
+        "description": "App Store Guideline 2.1 uchun demo akkaunt. Har chaqirilganda demo bot_user, specialist va sample notifications UPSERT qilinadi, shunda delete qilingandan keyin qayta login bo'lganda ma'lumotlar tiklanadi. Production-da haqiqiy auth bilan almashtirilishi kerak.",
+        "responses": {
+          "200": {
+            "description": "Demo akkaunt tayyor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "telegram_user_id": { "type": "integer", "example": 999000001 },
+                    "username": { "type": "string", "example": "demo_apple" },
+                    "first_name": { "type": "string", "example": "Demo" },
+                    "last_name": { "type": "string", "example": "Reviewer" },
+                    "is_demo": { "type": "boolean", "example": true }
+                  }
+                }
+              }
+            }
+          },
+          "500": { "description": "Demo akkauntni tayyorlashda xato" }
+        }
+      }
+    },
+    "/api/mobile/account": {
+      "delete": {
+        "tags": ["Mobile - Account"],
+        "summary": "Hisobni butunlay o'chirish",
+        "description": "App Store Guideline 5.1.1(v) uchun in-app account deletion. Berilgan telegram_user_id ga tegishli barcha ma'lumotlarni o'chiradi: applications, specialists, subscriptions, device_tokens, notifications, referrals, mobile_auth_sessions, bot_users + uploads/ papkadagi photo fayllar. Bu amal qaytarib bo'lmaydi.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["telegram_user_id"],
+                "properties": {
+                  "telegram_user_id": { "type": "integer", "example": 123456789 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Akkaunt va barcha bog'liq ma'lumotlar o'chirildi",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "deleted": {
+                      "type": "object",
+                      "properties": {
+                        "applications": { "type": "integer", "example": 1 },
+                        "specialists": { "type": "integer", "example": 1 },
+                        "subscriptions": { "type": "integer", "example": 0 },
+                        "device_tokens": { "type": "integer", "example": 1 },
+                        "notifications": { "type": "integer", "example": 3 },
+                        "referrals": { "type": "integer", "example": 0 },
+                        "mobile_auth_sessions": { "type": "integer", "example": 0 },
+                        "bot_users": { "type": "integer", "example": 1 }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "telegram_user_id majburiy yoki noto'g'ri formatda" },
+          "500": { "description": "O'chirishda xato" }
+        }
+      }
     }
   }
 }
