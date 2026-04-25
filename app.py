@@ -295,6 +295,9 @@ def get_specialists():
         # Don't show blocked workers on public site
         if status == 'blocked':
             is_visible = False
+        # Demo profile (App Store reviewer uchun) public listing-da ko'rinmasligi kerak
+        elif status == 'demo' or row.get('telegram_chat_id') == DEMO_TELEGRAM_USER_ID:
+            is_visible = False
         elif is_new_scheme:
             def _parse(ts):
                 if not ts:
@@ -509,11 +512,18 @@ def get_specialist(specialist_id):
     
     cursor.execute('SELECT * FROM specialists WHERE id = %s', (specialist_id,))
     row = cursor.fetchone()
-    
+
     if row is None:
         conn.close()
         return jsonify({'error': 'Специалист не найден'}), 404
-    
+
+    # Demo profilni public API orqali ochmaslik
+    row_status = row['status'] if 'status' in row.keys() else None
+    row_chat_id = row['telegram_chat_id'] if 'telegram_chat_id' in row.keys() else None
+    if row_status == 'demo' or row_chat_id == DEMO_TELEGRAM_USER_ID:
+        conn.close()
+        return jsonify({'error': 'Специалист не найден'}), 404
+
     specialist = {
         'id': row['id'],
         'profession': row['profession'],
@@ -529,7 +539,7 @@ def get_specialist(specialist_id):
         'top_order': row['top_order'],
         'created_at': row['created_at']
     }
-    
+
     conn.close()
     return jsonify({'specialist': specialist})
 
@@ -2091,6 +2101,9 @@ TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN', '')
 ADMIN_TELEGRAM_IDS = [x.strip() for x in os.environ.get('ADMIN_TELEGRAM_ID', '').split(',') if x.strip()]
 BOT_USERNAME = os.environ.get('BOT_USERNAME', '')  # Bot username (without @)
 
+# App Store reviewer uchun demo user (faqat tekshiruv uchun, production-da haqiqiy auth bilan almashtiriladi)
+DEMO_TELEGRAM_USER_ID = 999000001
+
 
 def send_telegram_message(chat_id, text, reply_markup=None):
     """Telegram Bot API orqali xabar yuborish."""
@@ -2629,6 +2642,156 @@ def mobile_notifications_clear():
     deleted = cur.rowcount
     conn.commit()
     conn.close()
+
+    return jsonify({'success': True, 'deleted': deleted})
+
+
+# ---- App Store Review: Demo Login & Account Deletion ----
+# Bu ikkala endpoint App Store reviewer-ning Guideline 2.1 (demo access) va
+# 5.1.1(v) (in-app account deletion) talablarini bajarish uchun.
+# Production-da haqiqiy auth bilan almashtirilishi kerak.
+
+@app.route('/api/mobile/demo-login', methods=['POST'])
+def mobile_demo_login():
+    """App Store reviewer uchun demo akkaunt. Har chaqirilganda demo ma'lumotlar
+    qayta seed qilinadi (UPSERT), shunda delete-login sikli buzilmaydi."""
+    uid = DEMO_TELEGRAM_USER_ID
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        # 1) bot_users — UPSERT
+        cur.execute(
+            """INSERT INTO bot_users (user_id, username, first_name, last_name)
+               VALUES (%s, 'demo_apple', 'Demo', 'Reviewer')
+               ON DUPLICATE KEY UPDATE
+                 username = VALUES(username),
+                 first_name = VALUES(first_name),
+                 last_name = VALUES(last_name)""",
+            (uid,)
+        )
+
+        # 2) specialists — agar yo'q bo'lsa, demo profil yaratish
+        cur.execute("SELECT id FROM specialists WHERE telegram_chat_id = %s", (uid,))
+        if not cur.fetchone():
+            now_iso = datetime.utcnow().isoformat()
+            paid_until = (datetime.utcnow() + timedelta(days=365)).isoformat()
+            cur.execute(
+                """INSERT INTO specialists
+                   (profession, full_name, phone, email, experience, price,
+                    free_time, city, country, description, status,
+                    trial_started_at, paid_until, telegram_chat_id)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                ('Электрик', 'Demo Specialist', '+998901234567', 'demo@protop.uz',
+                 5, '100000', '09:00-18:00', 'Tashkent', 'Uzbekistan',
+                 'Demo profile for App Store review. Not a real specialist.',
+                 'demo', now_iso, paid_until, uid)
+            )
+
+        # 3) notifications — agar bitta ham yo'q bo'lsa, sample qo'shish
+        cur.execute(
+            "SELECT 1 FROM notifications WHERE telegram_user_id = %s LIMIT 1",
+            (uid,)
+        )
+        if not cur.fetchone():
+            samples = [
+                ('Welcome to ProTop', 'Demo akkauntga xush kelibsiz! Bu sinov bildirishnomasi.'),
+                ('Profile activated', 'Sizning demo profilingiz faollashtirildi.'),
+                ('New message', 'Mijozdan yangi xabar mavjud.'),
+            ]
+            for title, body in samples:
+                cur.execute(
+                    """INSERT INTO notifications (telegram_user_id, title, body)
+                       VALUES (%s, %s, %s)""",
+                    (uid, title, body)
+                )
+
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        print(f"Demo login error: {e}")
+        return jsonify({'error': "Demo akkauntni tayyorlashda xato"}), 500
+    finally:
+        conn.close()
+
+    return jsonify({
+        'success': True,
+        'telegram_user_id': uid,
+        'username': 'demo_apple',
+        'first_name': 'Demo',
+        'last_name': 'Reviewer',
+        'is_demo': True
+    })
+
+
+@app.route('/api/mobile/account', methods=['DELETE'])
+def mobile_delete_account():
+    """Foydalanuvchi akkauntini va unga bog'liq barcha ma'lumotlarni o'chirish.
+    App Store Guideline 5.1.1(v) talabi."""
+    data = request.get_json(silent=True) or {}
+    uid = data.get('telegram_user_id') or request.args.get('telegram_user_id')
+    if not uid:
+        return jsonify({'error': 'telegram_user_id majburiy'}), 400
+    try:
+        uid = int(uid)
+    except (TypeError, ValueError):
+        return jsonify({'error': "telegram_user_id raqam bo'lishi kerak"}), 400
+
+    conn = get_db()
+    cur = conn.cursor()
+    deleted = {}
+    try:
+        # Avval photo fayllarni o'chirish (DB row-larni o'chirishdan oldin path-larni o'qib olamiz)
+        photo_paths = []
+        cur.execute("SELECT photo_path FROM applications WHERE user_id = %s", (uid,))
+        for r in cur.fetchall():
+            if r.get('photo_path'):
+                photo_paths.append(r['photo_path'])
+        cur.execute("SELECT photo_url FROM specialists WHERE telegram_chat_id = %s", (uid,))
+        for r in cur.fetchall():
+            if r.get('photo_url'):
+                photo_paths.append(r['photo_url'])
+
+        for p in photo_paths:
+            try:
+                # path traversal-ni oldini olish: faqat basename qoldiramiz
+                safe_name = os.path.basename(str(p))
+                full = os.path.join('uploads', safe_name)
+                if os.path.exists(full):
+                    os.remove(full)
+            except OSError:
+                pass
+
+        # DB jadvallaridan o'chirish
+        cur.execute("DELETE FROM applications WHERE user_id = %s", (uid,))
+        deleted['applications'] = cur.rowcount
+        cur.execute("DELETE FROM specialists WHERE telegram_chat_id = %s", (uid,))
+        deleted['specialists'] = cur.rowcount
+        cur.execute("DELETE FROM subscriptions WHERE telegram_user_id = %s", (uid,))
+        deleted['subscriptions'] = cur.rowcount
+        cur.execute("DELETE FROM device_tokens WHERE telegram_user_id = %s", (uid,))
+        deleted['device_tokens'] = cur.rowcount
+        cur.execute("DELETE FROM notifications WHERE telegram_user_id = %s", (uid,))
+        deleted['notifications'] = cur.rowcount
+        cur.execute(
+            "DELETE FROM referrals WHERE referrer_id = %s OR referred_user_id = %s",
+            (uid, uid)
+        )
+        deleted['referrals'] = cur.rowcount
+        cur.execute(
+            "DELETE FROM mobile_auth_sessions WHERE telegram_user_id = %s",
+            (uid,)
+        )
+        deleted['mobile_auth_sessions'] = cur.rowcount
+        cur.execute("DELETE FROM bot_users WHERE user_id = %s", (uid,))
+        deleted['bot_users'] = cur.rowcount
+
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        print(f"Delete account error: {e}")
+        return jsonify({'error': "Akkauntni o'chirishda xato"}), 500
+    finally:
+        conn.close()
 
     return jsonify({'success': True, 'deleted': deleted})
 
