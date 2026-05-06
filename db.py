@@ -199,7 +199,19 @@ def init_db():
                 )
             """)
 
-            # 10. ADVERTISEMENTS
+            # 10. APPLE USERS (Sign in with Apple → telegram_user_id alias)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS apple_users (
+                    apple_sub VARCHAR(255) PRIMARY KEY,
+                    user_id BIGINT NOT NULL UNIQUE,
+                    email VARCHAR(255),
+                    full_name VARCHAR(255),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    INDEX idx_apple_users_user (user_id)
+                )
+            """)
+
+            # 11. ADVERTISEMENTS
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS advertisements (
                     id INT AUTO_INCREMENT PRIMARY KEY,

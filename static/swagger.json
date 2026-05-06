@@ -1094,6 +1094,68 @@
         }
       }
     },
+    "/api/mobile/auth/apple": {
+      "post": {
+        "tags": ["Mobile - Auth"],
+        "summary": "Sign in with Apple",
+        "description": "Apple SDK qaytargan identity_token'ni serverda verify qilib, foydalanuvchini yaratadi yoki topadi. Birinchi marta kirganda Apple full_name yuboradi (keyin yo'q). Javob xuddi /api/mobile/auth/check confirmed bo'lgan formatdek (telegram_user_id qaytadi — bu Apple user uchun sintetik ID).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["identity_token"],
+                "properties": {
+                  "identity_token": {
+                    "type": "string",
+                    "description": "Apple Sign-In SDK qaytargan JWT",
+                    "example": "eyJraWQiOiJ..."
+                  },
+                  "full_name": {
+                    "type": "object",
+                    "description": "Apple faqat birinchi marta kirganda yuboradi",
+                    "properties": {
+                      "first_name": { "type": "string", "example": "John" },
+                      "last_name": { "type": "string", "example": "Appleseed" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Auth muvaffaqiyatli",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "telegram_user_id": {
+                      "type": "integer",
+                      "description": "Apple user uchun sintetik ID (boshqa /api/mobile/* endpointlarda ishlatiladi)",
+                      "example": 2000000001
+                    },
+                    "username": { "type": "string", "example": "apple_a1b2c3d4" },
+                    "first_name": { "type": "string", "example": "John" },
+                    "last_name": { "type": "string", "example": "Appleseed" },
+                    "email": { "type": "string", "example": "user@privaterelay.appleid.com" },
+                    "is_new": { "type": "boolean", "example": false },
+                    "auth_provider": { "type": "string", "example": "apple" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "identity_token yetishmayapti" },
+          "401": { "description": "Token yaroqsiz (signature/exp/aud/iss xato)" },
+          "500": { "description": "Server xatosi" }
+        }
+      }
+    },
     "/api/mobile/application": {
       "post": {
         "tags": ["Mobile - Application"],

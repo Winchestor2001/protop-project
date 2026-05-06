@@ -2104,6 +2104,104 @@ BOT_USERNAME = os.environ.get('BOT_USERNAME', '')  # Bot username (without @)
 # App Store reviewer uchun demo user (faqat tekshiruv uchun, production-da haqiqiy auth bilan almashtiriladi)
 DEMO_TELEGRAM_USER_ID = 999000001
 
+# ---- Sign in with Apple ----
+# Bundle ID (iOS app) yoki Service ID (web). Bir nechtasini vergul bilan ajratish mumkin.
+APPLE_CLIENT_IDS = [x.strip() for x in os.environ.get('APPLE_CLIENT_IDS', '').split(',') if x.strip()]
+APPLE_KEYS_URL = 'https://appleid.apple.com/auth/keys'
+APPLE_ISSUER = 'https://appleid.apple.com'
+# Apple user'lar uchun sintetik user_id range: 2_000_000_000 dan boshlanadi
+# (Telegram real ID'lari odatda ~10 raqamli, lekin xavfsizlik uchun shu diapazonni band qilamiz)
+APPLE_USER_ID_OFFSET = 2_000_000_000
+
+# Apple'ning JWKS public key'larini in-memory cache qilish (TTL: 1 soat)
+_apple_jwks_cache = {'keys': None, 'fetched_at': 0}
+
+
+def _get_apple_public_keys():
+    """Apple'ning JWKS endpoint'idan public key'larni olib, kid bo'yicha indekslab qaytarish."""
+    import time
+    now = time.time()
+    if _apple_jwks_cache['keys'] and (now - _apple_jwks_cache['fetched_at'] < 3600):
+        return _apple_jwks_cache['keys']
+
+    resp = requests.get(APPLE_KEYS_URL, timeout=10)
+    resp.raise_for_status()
+    keys_by_kid = {k['kid']: k for k in resp.json().get('keys', [])}
+    _apple_jwks_cache['keys'] = keys_by_kid
+    _apple_jwks_cache['fetched_at'] = now
+    return keys_by_kid
+
+
+def verify_apple_identity_token(identity_token: str):
+    """Apple'dan kelgan identity_token'ni verify qilish.
+
+    Returns:
+        dict: {sub, email, email_verified} agar valid bo'lsa
+    Raises:
+        ValueError: token yaroqsiz bo'lsa
+    """
+    import jwt
+    from jwt.algorithms import RSAAlgorithm
+
+    if not APPLE_CLIENT_IDS:
+        raise ValueError("APPLE_CLIENT_IDS env o'zgaruvchisi sozlanmagan")
+
+    # 1. Token header'idan kid'ni olish
+    try:
+        unverified_header = jwt.get_unverified_header(identity_token)
+    except Exception as e:
+        raise ValueError(f"Token header'ini o'qib bo'lmadi: {e}")
+
+    kid = unverified_header.get('kid')
+    if not kid:
+        raise ValueError("Token'da kid yo'q")
+
+    # 2. Apple JWKS'dan mos public key'ni topish
+    try:
+        keys = _get_apple_public_keys()
+    except Exception as e:
+        raise ValueError(f"Apple public key'larni olishda xato: {e}")
+
+    jwk = keys.get(kid)
+    if not jwk:
+        # Cache eskirgan bo'lishi mumkin — bir marta yangilab ko'rish
+        _apple_jwks_cache['fetched_at'] = 0
+        keys = _get_apple_public_keys()
+        jwk = keys.get(kid)
+        if not jwk:
+            raise ValueError(f"Apple key topilmadi (kid={kid})")
+
+    public_key = RSAAlgorithm.from_jwk(json.dumps(jwk))
+
+    # 3. Token'ni verify qilish (signature, exp, iss, aud)
+    try:
+        claims = jwt.decode(
+            identity_token,
+            public_key,
+            algorithms=['RS256'],
+            audience=APPLE_CLIENT_IDS,
+            issuer=APPLE_ISSUER,
+        )
+    except jwt.ExpiredSignatureError:
+        raise ValueError("Token muddati tugagan")
+    except jwt.InvalidAudienceError:
+        raise ValueError("Token audience noto'g'ri (bundle ID mos kelmadi)")
+    except jwt.InvalidIssuerError:
+        raise ValueError("Token issuer noto'g'ri (Apple emas)")
+    except jwt.InvalidTokenError as e:
+        raise ValueError(f"Token yaroqsiz: {e}")
+
+    sub = claims.get('sub')
+    if not sub:
+        raise ValueError("Token'da sub yo'q")
+
+    return {
+        'sub': sub,
+        'email': claims.get('email'),
+        'email_verified': str(claims.get('email_verified', '')).lower() == 'true',
+        'is_private_email': str(claims.get('is_private_email', '')).lower() == 'true',
+    }
+
 
 def send_telegram_message(chat_id, text, reply_markup=None):
     """Telegram Bot API orqali xabar yuborish."""
@@ -3031,6 +3129,129 @@ def mobile_auth_confirm():
         conn.close()
 
     return jsonify({'success': True})
+
+
+@app.route('/api/mobile/auth/apple', methods=['POST'])
+def mobile_auth_apple():
+    """Sign in with Apple — identity_token'ni verify qilib, user yaratish yoki topish.
+
+    Body (JSON):
+        identity_token (required): Apple SDK qaytargan JWT
+        full_name (optional): Faqat birinchi marta kirganda Apple yuboradi
+            {first_name, last_name}
+
+    Returns:
+        telegram_user_id: Sintetik (yoki linked) user ID — qolgan API'lar uchun
+        username, first_name, last_name, email
+        is_new: Birinchi marta kirgan bo'lsa True
+    """
+    data = request.get_json(silent=True) or {}
+    identity_token = data.get('identity_token')
+
+    if not identity_token:
+        return jsonify({'error': 'identity_token majburiy'}), 400
+
+    # 1. Apple token'ni verify qilish
+    try:
+        claims = verify_apple_identity_token(identity_token)
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 401
+    except Exception as e:
+        print(f"Apple auth verify xatolik: {e}")
+        return jsonify({'error': 'Token tekshirishda xatolik'}), 500
+
+    apple_sub = claims['sub']
+    email = claims.get('email')
+
+    # 2. Optional full_name — Apple faqat birinchi marta yuboradi
+    full_name_data = data.get('full_name') or {}
+    first_name = sanitize_input(full_name_data.get('first_name', '') or '', 100)
+    last_name = sanitize_input(full_name_data.get('last_name', '') or '', 100)
+    full_name_str = (f"{first_name} {last_name}").strip() or None
+
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        # 3. apple_users'da bormi?
+        cur.execute("SELECT user_id, email, full_name FROM apple_users WHERE apple_sub = %s", (apple_sub,))
+        existing = cur.fetchone()
+
+        if existing:
+            user_id = existing['user_id']
+            # Email/name yangilanishi mumkin (faqat bo'sh bo'lsa to'ldirib qo'yamiz)
+            updates = []
+            params = []
+            if email and not existing.get('email'):
+                updates.append("email = %s")
+                params.append(email)
+            if full_name_str and not existing.get('full_name'):
+                updates.append("full_name = %s")
+                params.append(full_name_str)
+            if updates:
+                params.append(apple_sub)
+                cur.execute(
+                    f"UPDATE apple_users SET {', '.join(updates)} WHERE apple_sub = %s",
+                    params
+                )
+
+            # bot_users'dan ma'lumotlarni olish
+            cur.execute("SELECT username, first_name, last_name FROM bot_users WHERE user_id = %s", (user_id,))
+            bu = cur.fetchone() or {}
+            conn.commit()
+
+            return jsonify({
+                'success': True,
+                'telegram_user_id': user_id,
+                'username': bu.get('username'),
+                'first_name': bu.get('first_name'),
+                'last_name': bu.get('last_name'),
+                'email': existing.get('email') or email,
+                'is_new': False,
+                'auth_provider': 'apple',
+            })
+
+        # 4. Yangi user — sintetik user_id yaratish
+        # Mavjud max apple user_id'dan +1 (yoki offset'dan boshlanish)
+        cur.execute(
+            "SELECT MAX(user_id) AS max_id FROM apple_users WHERE user_id >= %s",
+            (APPLE_USER_ID_OFFSET,)
+        )
+        row = cur.fetchone()
+        max_existing = row['max_id'] if row and row['max_id'] else None
+        new_user_id = (max_existing + 1) if max_existing else (APPLE_USER_ID_OFFSET + 1)
+
+        # 5. bot_users + apple_users'ga insert
+        username = f"apple_{apple_sub[:8]}"  # qisqartirilgan, unique emas lekin display uchun
+        cur.execute(
+            """INSERT INTO bot_users (user_id, username, first_name, last_name)
+               VALUES (%s, %s, %s, %s)
+               ON DUPLICATE KEY UPDATE username = VALUES(username)""",
+            (new_user_id, username, first_name or 'Apple', last_name or 'User')
+        )
+        cur.execute(
+            """INSERT INTO apple_users (apple_sub, user_id, email, full_name)
+               VALUES (%s, %s, %s, %s)""",
+            (apple_sub, new_user_id, email, full_name_str)
+        )
+        conn.commit()
+
+        return jsonify({
+            'success': True,
+            'telegram_user_id': new_user_id,
+            'username': username,
+            'first_name': first_name or 'Apple',
+            'last_name': last_name or 'User',
+            'email': email,
+            'is_new': True,
+            'auth_provider': 'apple',
+        })
+
+    except Exception as e:
+        conn.rollback()
+        print(f"Apple auth DB xatolik: {e}")
+        return jsonify({'error': 'Akkaunt yaratishda xatolik'}), 500
+    finally:
+        conn.close()
 
 
 if __name__ == '__main__':
