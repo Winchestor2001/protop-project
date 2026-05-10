@@ -111,6 +111,7 @@
     { "name": "Statistics", "description": "Platforma statistikasi" },
     { "name": "Advertisements", "description": "Reklamalar" },
     { "name": "Auth", "description": "Autentifikatsiya (sayt foydalanuvchilari)" },
+    { "name": "Admin - Auth", "description": "Admin: panel autentifikatsiyasi" },
     { "name": "Admin - Specialists", "description": "Admin: Mutaxassislarni boshqarish" },
     { "name": "Admin - Advertisements", "description": "Admin: Reklamalarni boshqarish" },
     { "name": "Admin - Categories", "description": "Admin: Kategoriyalar va kasblarni boshqarish" },
@@ -122,6 +123,42 @@
     { "name": "Mobile - Notifications", "description": "Mobile ilova uchun bildirishnomalar" }
   ],
   "paths": {
+    "/admin/login": {
+      "post": {
+        "tags": ["Admin - Auth"],
+        "summary": "Admin paneliga kirish",
+        "description": "Form-data orqali username va password yuboriladi. Muvaffaqiyatli kirsa /admin sahifasiga redirect qilinadi va session cookie o'rnatiladi.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "required": ["username", "password"],
+                "properties": {
+                  "username": { "type": "string", "example": "admin" },
+                  "password": { "type": "string", "format": "password" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "302": { "description": "Muvaffaqiyatli — /admin sahifasiga redirect" },
+          "401": { "description": "Login yoki parol noto'g'ri" }
+        }
+      }
+    },
+    "/admin/logout": {
+      "post": {
+        "tags": ["Admin - Auth"],
+        "summary": "Admin paneldan chiqish",
+        "description": "Session ni tozalaydi va /admin sahifasiga redirect qiladi.",
+        "responses": {
+          "302": { "description": "/admin sahifasiga redirect" }
+        }
+      }
+    },
     "/api/specialists": {
       "get": {
         "tags": ["Specialists"],
@@ -525,6 +562,60 @@
         }
       }
     },
+    "/api/admin/specialists": {
+      "post": {
+        "tags": ["Admin - Specialists"],
+        "summary": "Yangi mutaxassis qo'shish (admin)",
+        "description": "Admin paneldan yangi mutaxassis qo'shadi. Multipart yoki JSON ko'rinishida yuborish mumkin. Photo upload qo'llab-quvvatlanadi.",
+        "security": [{ "BasicAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["profession", "full_name", "phone"],
+                "properties": {
+                  "profession": { "type": "string" },
+                  "full_name": { "type": "string" },
+                  "phone": { "type": "string" },
+                  "email": { "type": "string" },
+                  "experience": { "type": "integer" },
+                  "free_time": { "type": "string" },
+                  "city": { "type": "string" },
+                  "country": { "type": "string" },
+                  "description": { "type": "string" },
+                  "photo": { "type": "string", "format": "binary" }
+                }
+              }
+            },
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["profession", "full_name", "phone"],
+                "properties": {
+                  "profession": { "type": "string" },
+                  "full_name": { "type": "string" },
+                  "phone": { "type": "string" },
+                  "email": { "type": "string" },
+                  "experience": { "type": "integer" },
+                  "free_time": { "type": "string" },
+                  "city": { "type": "string" },
+                  "country": { "type": "string" },
+                  "description": { "type": "string" },
+                  "photo_url": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Yaratildi", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Specialist" } } } },
+          "400": { "description": "Xatolik" },
+          "401": { "description": "Ruxsat yo'q" }
+        }
+      }
+    },
     "/api/admin/specialists/list": {
       "get": {
         "tags": ["Admin - Specialists"],
@@ -600,6 +691,53 @@
           "200": { "description": "Blokdan chiqarildi" },
           "401": { "description": "Ruxsat yo'q" },
           "404": { "description": "Topilmadi" }
+        }
+      }
+    },
+    "/api/admin/specialists/{id}/subscription": {
+      "post": {
+        "tags": ["Admin - Specialists"],
+        "summary": "Mutaxassis obunasini qo'lda yangilash",
+        "description": "Trial yoki paid_until sanasini admin tomonidan o'zgartirish: 1 oy qo'shish, trial reset qilish (150 kun), yoki muddati tugagan deb belgilash. set_expired holatida foydalanuvchiga Telegram orqali to'lov so'rovi yuboriladi.",
+        "security": [{ "BasicAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["action"],
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "enum": ["add_month", "reset_trial", "set_expired"],
+                    "description": "add_month — paid_until ga 30 kun qo'shadi; reset_trial — trial_expires_at ni 150 kun qiladi; set_expired — kechagi sana qo'yib expired qiladi va Telegram orqali to'lov so'rovi yuboradi"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Yangilandi",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean" },
+                    "new_date": { "type": "string", "nullable": true, "description": "Yangi sana ISO formatida" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Ruxsat yo'q" },
+          "404": { "description": "Mutaxassis topilmadi" }
         }
       }
     },
@@ -820,6 +958,23 @@
           "200": { "description": "Qo'shildi" },
           "400": { "description": "Xatolik" },
           "401": { "description": "Ruxsat yo'q" }
+        }
+      },
+      "delete": {
+        "tags": ["Admin - Categories"],
+        "summary": "Kategoriyadan kasbni o'chirish",
+        "description": "Tanlangan kategoriyadan ko'rsatilgan kasbni o'chiradi (categories JSON faylidan).",
+        "security": [{ "BasicAuth": [] }],
+        "parameters": [
+          { "name": "prof_name", "in": "query", "required": true, "schema": { "type": "string" }, "description": "O'chiriladigan kasb nomi" },
+          { "name": "category_key", "in": "query", "required": true, "schema": { "type": "string" }, "description": "Kategoriya kaliti (masalan: 'it')" }
+        ],
+        "responses": {
+          "200": { "description": "O'chirildi" },
+          "400": { "description": "prof_name yoki category_key yo'q" },
+          "401": { "description": "Ruxsat yo'q" },
+          "404": { "description": "Kategoriya yoki kasb topilmadi" },
+          "500": { "description": "Server xatosi" }
         }
       }
     },
@@ -1500,6 +1655,63 @@
           },
           "400": { "description": "token majburiy" },
           "404": { "description": "Token topilmadi" }
+        }
+      }
+    },
+    "/api/admin/devices": {
+      "get": {
+        "tags": ["Admin - Push Notifications"],
+        "summary": "Ro'yxatdan o'tgan qurilmalar ro'yxati",
+        "description": "Mobile ilovaga ulangan barcha device tokenlarni qaytaradi (admin uchun). Har bir token foydalanuvchi ma'lumotlari (first_name, username) bilan birlashtirilgan.",
+        "security": [{ "BasicAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Muvaffaqiyatli",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "devices": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "integer" },
+                          "telegram_user_id": { "type": "integer" },
+                          "token": { "type": "string" },
+                          "platform": { "type": "string", "enum": ["ios", "android"] },
+                          "created_at": { "type": "string" },
+                          "updated_at": { "type": "string" },
+                          "first_name": { "type": "string", "nullable": true },
+                          "username": { "type": "string", "nullable": true }
+                        }
+                      }
+                    },
+                    "total": { "type": "integer" },
+                    "firebase_initialized": { "type": "boolean" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Ruxsat yo'q" }
+        }
+      }
+    },
+    "/api/admin/devices/{device_id}": {
+      "delete": {
+        "tags": ["Admin - Push Notifications"],
+        "summary": "Qurilma tokenini o'chirish",
+        "description": "Admin paneldan ma'lum bir device_id bo'yicha mobile qurilma tokenini o'chiradi.",
+        "security": [{ "BasicAuth": [] }],
+        "parameters": [
+          { "name": "device_id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "O'chirildi" },
+          "401": { "description": "Ruxsat yo'q" },
+          "404": { "description": "Qurilma topilmadi" }
         }
       }
     },
